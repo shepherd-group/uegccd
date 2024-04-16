@@ -1,0 +1,9 @@
+# Electrons:      14
+# rS Points:      1
+Momentum Cutoff:  670
+rSMin:            1.0
+rSMax:            1.0
+Do Rings:         T
+Do XRings:        T
+Do Ladders:       T
+Do Mosaics:       F

@@ -1,8 +1,8 @@
 # Electrons:      14
 # rS Points:      1
-Momentum Cutoff:  5 
-rSMin:            1.0
-rSMax:            1.0
+Momentum Cutoff:  2 
+rSMin:            0.01
+rSMax:            0.01
 Do Rings:         T
 Do XRings:        T
 Do Ladders:       T
@@ -22,3 +22,4 @@ LinLadd Range:    0
 QuadLadd Range:   0
 DLadders Range:   0
 ExLadders Range:  0
+NTwist:           0.1 0.1 0.1

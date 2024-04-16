@@ -1,0 +1,13 @@
+v7-N-14-2
+
+MP2 averaged over 100 twist angles, then CCD run once at the end
+originally from /Shared/informatics_jshepherd/Users/tmihm/projects/Active/Connectivity/Density-1.0/BasisX2/MASTERargonTAv7/code/ZRun/N-14-2
+
+v6-N-14-2
+
+CCD run at every twist angle
+from: /Volumes/informatics_jshepherd/Users/tmihm/projects/Active/Active/TwistAveraging/N14-294/MASTERargonTAv6/code/ZRun
+
+dRPA
+
+from: /Volumes/rdss_jshepherd/shared/papers/heg_cc/RHF_Scan/ZRun/14-electron/ZRun/dRPA 

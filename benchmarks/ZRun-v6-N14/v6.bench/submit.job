@@ -1,0 +1,17 @@
+#!/bin/bash
+
+cd /Users/tmihm/projects/Active/TwistAveraging/N14-294/MASTERargonTAv6/code/ZRun/N-14-2
+
+#$ -pe smp 4 -q JS,INFORMATICS,UI
+#$ -o /Users/tmihm/projects/Active/TwistAveraging/N14-294/MASTERargonTAv6/code/Out
+#$ -e /Users/tmihm/projects/Active/TwistAveraging/N14-294/MASTERargonTAv6/code/ZRun/Error
+
+start=`date +%s`
+/Users/tmihm/projects/Active/TwistAveraging/N14-294/MASTERargonTAv6/code/ZRun/ZCode # >/dev/null
+
+end=`date +%s`
+
+pwd = $pwd
+runtime=$((end-start))
+echo "$runtime" > time
+echo "$pwd"

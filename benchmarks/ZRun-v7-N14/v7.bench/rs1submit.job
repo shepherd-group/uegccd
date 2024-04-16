@@ -1,0 +1,18 @@
+#!/bin/bash
+
+cd /Users/tmihm/projects/Active/Connectivity/HighDesnity-0.01/BasisX2/MASTERargonTAv7/code/ZRun/N-14-2
+
+#$ -N rsX2-0.01
+#$ -pe smp 2 -q JS,INFORMATICS,UI
+#$ -o /Users/tmihm/projects/Active/Connectivity/HighDesnity-0.01/BasisX2/MASTERargonTAv7/code/Out
+#$ -e /Users/tmihm/projects/Active/Connectivity/HighDesnity-0.01/BasisX2/MASTERargonTAv7/code/Error
+
+start=`date +%s`
+/Users/tmihm/projects/Active/Connectivity/HighDesnity-0.01/BasisX2/MASTERargonTAv7/code/ZRun/ZCode # >/dev/null
+end=`date +%s`
+
+pwd = $pwd
+runtime=$((end-start))
+echo "$runtime" > time
+echo "$pwd"
+

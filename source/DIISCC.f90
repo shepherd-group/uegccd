@@ -4,30 +4,44 @@
    Use Precision
    Use Constants
    Implicit None
-   Real (Kind=pr), Allocatable :: OldT2abab(:,:,:,:), R2abab(:,:,:,:)
-   Real (Kind=pr), Allocatable :: OldT2abba(:,:,:,:), R2abba(:,:,:,:)
 
    Contains
 
-      Subroutine SetUpDIISCC(O,V,N,NDIIS)
-      Implicit None
+      Subroutine SetUpDIISCC(DIISCCData,O,V,N,T2abab,T2abba)
+
+      Use Types, only: DIISCCDataType
+
+      Type (DIISCCDataType), Intent(Out) :: DIISCCData
+
       Integer, Intent(In)  :: O, V, N
-      Integer, Intent(Out) :: NDIIS
+      Real (Kind=pr), Intent(In) :: T2abab(O,O,V:N), T2abba(O,O,V:N)
+
       Integer, Parameter   :: Max_N_DIIS = 3
-      Integer :: IAlloc
+      Integer :: IAlloc, NDIIS
 
       Do NDIIS = Max_N_DIIS,1,-1
-      Allocate(OldT2abab(1:O,1:O,V:N,NDIIS),                &
-               R2abab(1:O,1:O,V:N,NDIIS),                   &
-               OldT2abba(1:O,1:O,V:N,NDIIS),                &
-               R2abba(1:O,1:O,V:N,NDIIS),                   &
+      Allocate(DIISCCData%OldT2abab(1:O,1:O,V:N,NDIIS),                &
+               DIISCCData%R2abab(1:O,1:O,V:N,NDIIS),                   &
+               DIISCCData%OldT2abba(1:O,1:O,V:N,NDIIS),                &
+               DIISCCData%R2abba(1:O,1:O,V:N,NDIIS),                   &
                Stat=IAlloc)
         If(IAlloc == 0) Exit
       End Do
+      
+      DIISCCData%NDIIS = NDIIS 
 
-      If( .not. Allocated(OldT2abab)) Stop "Could not allocate for DIIS"
+      If( .not. Allocated(DIISCCData%OldT2abab)) Stop "Could not allocate for DIIS"
+
+      DIISCCData%OldT2abab = Zero
+      DIISCCData%OldT2abab(:,:,:,NDIIS) = T2abab
+      DIISCCData%R2abab = Zero
+
+      DIISCCData%OldT2abba = Zero
+      DIISCCData%OldT2abba(:,:,:,NDIIS) = T2abba
+      DIISCCData%R2abba = Zero
 
       Return
+
       End Subroutine SetUpDIISCC
 
 
@@ -121,12 +135,23 @@
 
 
 
-      Subroutine ShutDownDIISCC
-      Implicit None
+      Subroutine ShutDownDIISCC(DIISCCData)
+
+      Use Types, only: DIISCCDataType
+
+      Type (DIISCCDataType), Intent(InOut) :: DIISCCData
+
       Integer IAlloc
-      DeAllocate(OldT2abab, OldT2abba, R2abab, R2abba, Stat=IAlloc)
+
+      DeAllocate(DIISCCData%OldT2abab, & 
+                 DIISCCData%OldT2abba, &
+                 DIISCCData%R2abab, &
+                 DIISCCData%R2abba, &
+                 Stat=IAlloc)
       If(IAlloc /= 0) Stop "Could not deallocate for DIIS"
+
       Return
+
       End Subroutine ShutDownDIISCC
 
    End Module DIISCC

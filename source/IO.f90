@@ -1,41 +1,30 @@
+! TODO - TNM: Add a input to UEGCCD-Dev for controlling the convergence
+! criterial of CCD calculation (e.g like in VASP)
+! TODO - WZV: Add an rng seed read in parameter.
 
    Module IO
 
    Use Precision
-   Use Constants
-   Use HEG
    Implicit None
    Private
    Public  :: ReadInput
 
    Contains
 
-      Subroutine ReadInput(NOcc,NAO,rSMin,rSMax,NumRSPoints,     &
-                           DoRing,DoXRing,DoLadder,DoMosaic,     &
-                           IRangeRing,IRangeXRing,IRangeLadder,IRangeMosaic, &
-                           IRangeDriverDirect,IRangeDriverExchange,IRangeEnergy,                       &
-                           IRangeLinRings,IRangeQuadRings,IRangeDirectRings,IRangeExchangeRings, &
-                           IRangeLinLadders,IRangeQuadLadders,IRangeDirectLadders,IRangeExchangeLadders)
+      Subroutine ReadInput(UEGInfo)
+      Use Types, only: UegInfoType
       Implicit None
-      Integer,        Intent(Out) :: NOcc, NAO, NumRSPoints
-      Logical,        Intent(Out) :: DoRing, DoXRing, DoLadder, DoMosaic
-      Integer,        Intent(Out) :: IRangeRing, IRangeXRing, IRangeLadder, IRangeMosaic
-      Integer,        Intent(Out) :: IRangeDriverDirect, IRangeDriverExchange, IRangeEnergy
-      Integer,        Intent(Out) :: IRangeLinRings, IRangeQuadRings, IRangeDirectRings, IRangeExchangeRings  
-      Integer,        Intent(Out) :: IRangeLinLadders, IRangeQuadLadders, IRangeDirectLadders, IRangeExchangeLadders
-      Real (Kind=pr), Intent(Out) :: rSMin, rSMax
-      Integer, Parameter    :: NParams = 24
+      Type (UEGInfoType), intent(Out) :: UEGInfo
+      Integer, Parameter    :: NParams = 44
       Integer, Parameter    :: LName   = 19
       Integer, Parameter    :: LLine   = 79
-      Integer               :: NElectron
       Logical               :: Error, Exists
       Character (len=5)     :: FormatString
       Character (len=LLine) :: Line, KeyWord, Value
       Character (len=LName) :: ParamName(NParams)
       Logical               :: SetOnce(NParams), SetTwice(NParams)
-      Integer :: I, ExStatus, LineNumber
-      Integer :: MaxKPoint
-      Real (Kind=pr) :: rS
+      Integer               :: I, ExStatus, LineNumber
+      Logical               :: EndInput
 
 !=====================================================================!
 !  This is a pretty complicated subroutine for me, as I know little   !
@@ -75,15 +64,15 @@
 !  multiplicity, and Kohn-Sham stuff.                                 !
 !=====================================================================!
 
+      ExStatus = 0
+
       Write(6,*) 'Reading Input...'
       Write(FormatString,'(a2,i2,a1)') '(a',LLine,')'
-
 
 !============================================================!
 !  Initialize the name list, and the Input checking arrays.  !
 !============================================================!
 
-      ExStatus = 0
       SetOnce  = .False.
       SetTwice = .False.
       ParamName = (/'# Electrons        ',    &
@@ -91,6 +80,7 @@
                     'rSMin              ',    &
                     'rSMax              ',    &
                     '# rS Points        ',    &
+                    'Safe ERI           ',    &
                     'Do Rings           ',    &
                     'Do XRings          ',    &
                     'Do Ladders         ',    &
@@ -109,8 +99,26 @@
                     'LinLadd Range      ',    &   ! for the linear ladders
                     'QuadLadd Range     ',    &   ! for the quadratic ladders
                     'DLadders Range     ',    &   ! by analogy to rings 
-                    'ExLadders Range    '/)       ! by analogy to rings
-
+                    'ExLadders Range    ',    &   ! by analogy to rings 
+                    'CoreFactor         ',    &   ! new CAS parameter 
+                    'TACalcN            ',    &   ! number of twist angles for TA and cTA
+                    'DoCalcTACCD        ',    &   ! calculates CCD during TA
+                    'DodRPASOSEX        ',    &   ! calculates dRPA+SOSEX instead of CCD
+                    'DoTruncCoulombHF   ',    &   ! truncates coulomb intergrals in the HF
+                    'DoTruncCoulombAll  ',    &   ! truncates all coulomb integrals
+                    'DoKS               ',    &   ! only KE is included in eigenvalues
+                    'MadelungFactor     ',    &   ! multiplies the madelung constant by this number
+                    'DoSingleCalc       ',    &   ! 
+                    'Gap                ',    &   ! opens a gap in the Fock matrix
+                    'fcut               ',    &   ! 
+                    'corefcut           ',    &   ! 
+                    'fcut2ecut          ',    &   ! this uses fcut to set ecut
+                    'GapII              ',    &   ! opens a gap in the ERI energy expression
+                    'DoSFCalcMP2        ',    &   ! Structure factor for mp2  
+                    'DoSFCalcCCD        ',    &   ! Structure factor for CCD
+                    'DoSkipTA           ',    &   ! Do not do TA at all
+                    'DoOnlyMP2Grid      ',    &   ! This just calculates the MP2 grid for ML project
+                    'EndInput           '/)       ! end of input 
 
 !================================================================!
 !  Assuming the Input file exists, open it and get ready to go.  !
@@ -138,81 +146,167 @@
         Case ('SKIP')
 
         Case ('# Electrons')
-         Read(Value,*) NElectron
-         NOcc = NElectron/2
-         If(NElectron < 0)         Stop 'Must have positive number of electrons'
-         If(Mod(NElectron,2) == 1) Stop 'Must have closed shell'
+         Read(Value,*) UEGInfo%NElectron
+         UEGInfo%NOcc = UEGInfo%NElectron/2
+         If(UEGInfo%NElectron < 0)         Stop 'Must have positive number of electrons'
+         If(Mod(UEGInfo%NElectron,2) == 1) Stop 'Must have closed shell'
 
         Case ('Momentum Cutoff')
-         Read(Value,*) MaxKPoint
+         Read(Value,*) UEGInfo%MaxKPoint
 
         Case ('rSMin')
-         Read(Value,*) rSMin
+         Read(Value,*) UEGInfo%rSMin
 
         Case ('rSMax')
-         Read(Value,*) rSMax
+         Read(Value,*) UEGInfo%rSMax
 
         Case ('# rS Points')
-         Read(Value,*) NumRSPoints
+         Read(Value,*) UEGInfo%NumRSPoints
+         If(UEGInfo%NumRSPoints > 1)         Stop 'Cannot have more than one rs point'
+
+        Case ('Safe ERI')
+         Read(Value,*) UEGInfo%SafeERI
 
         Case ('Do Rings')
-         Read(Value,*) DoRing
+         Read(Value,*) UEGInfo%DoRing
 
         Case ('Do XRings')
-         Read(Value,*) DoXRing
+         Read(Value,*) UEGInfo%DoXRing
 
         Case ('Do Ladders')
-         Read(Value,*) DoLadder
+         Read(Value,*) UEGInfo%DoLadder
 
         Case ('Do Mosaics')
-         Read(Value,*) DoMosaic
+         Read(Value,*) UEGInfo%DoMosaic
 
         Case ('Rings Range')
-         Read(Value,*) IRangeRing
+         Read(Value,*) UEGInfo%IRangeRing
 
         Case ('XRings Range')
-         Read(Value,*) IRangeXRing
+         Read(Value,*) UEGInfo%IRangeXRing
 
         Case ('Ladders Range')
-         Read(Value,*) IRangeLadder
+         Read(Value,*) UEGInfo%IRangeLadder
 
         Case ('Mosaics Range')
-         Read(Value,*) IRangeMosaic
+         Read(Value,*) UEGInfo%IRangeMosaic
 
         Case ('DriverDir Range') ! this implicitly sets the driver
-         Read(Value,*) IRangeDriverDirect
+         Read(Value,*) UEGInfo%IRangeDriverDirect
 
         Case ('DriverEx Range') ! this implicitly sets the driver
-         Read(Value,*) IRangeDriverExchange
+         Read(Value,*) UEGInfo%IRangeDriverExchange
 
         Case ('Energy Range') ! for the energy expression
-         Read(Value,*) IRangeEnergy
+         Read(Value,*) UEGInfo%IRangeEnergy
 
         Case ('LinRings Range') ! for the linear rings and cross rings
-         Read(Value,*) IRangeLinRings
+         Read(Value,*) UEGInfo%IRangeLinRings
 
         Case ('QuadRings Range') ! for the quadratic rings and cross rings
-         Read(Value,*) IRangeQuadRings
+         Read(Value,*) UEGInfo%IRangeQuadRings
         
         Case ('DRings Range') ! for the dRPA terms
-         Read(Value,*) IRangeDirectRings
+         Read(Value,*) UEGInfo%IRangeDirectRings
 
         Case ('ExRings Range') ! for the RPAX terms
-         Read(Value,*) IRangeExchangeRings
+         Read(Value,*) UEGInfo%IRangeExchangeRings
 
         Case ('LinLadd Range') ! for the linear ladders
-         Read(Value,*) IRangeLinLadders
+         Read(Value,*) UEGInfo%IRangeLinLadders
 
         Case ('QuadLadd Range') ! for the quadratic ladders
-         Read(Value,*) IRangeQuadLadders
+         Read(Value,*) UEGInfo%IRangeQuadLadders
         
         Case ('DLadders Range') ! by analogy to rings 
-         Read(Value,*) IRangeDirectLadders
+         Read(Value,*) UEGInfo%IRangeDirectLadders
 
         Case ('ExLadders Range') ! by analogy to rings
-         Read(Value,*) IRangeExchangeLadders
+         Read(Value,*) UEGInfo%IRangeExchangeLadders
+        
+        Case ('NTwist') ! twist angle
+         Read(Value,*) UEGInfo%NTwist
 
-
+        Case ('CoreFactor') ! for CAS
+         Read(Value,*) UEGInfo%CoreFactor
+         UEGInfo%CoreN=int(UEGInfo%NElectron/2*UEGInfo%CoreFactor)
+         write(61,*) UEGInfo%CoreN*2,"core electrons"
+         write(61,*) UEGInfo%NElectron-UEGInfo%CoreN*2,"active electrons"
+        
+        Case ('DoCalcTACCD') ! calculates CCD during TA
+         Read(Value,*) UEGInfo%DoCalcTACCD
+                    
+        Case ('TACalcN') ! number of twists
+         Read(Value,*) UEGInfo%TACalcN
+                    
+        Case ('DodRPASOSEX')
+         Read(Value,*) UEGInfo%DodRPASOSEX
+                    
+        Case ('DoTruncCoulombHF') 
+         Read(Value,*) UEGInfo%DoTruncCoulombHF
+         If(UEGInfo%DoTruncCoulombHF)         Stop 'Not Implemented'
+                    
+        Case ('DoTruncCoulombAll') 
+         Read(Value,*) UEGInfo%DoTruncCoulombAll
+         If(UEGInfo%DoTruncCoulombAll)         Stop 'Not Implemented'
+                    
+        Case ('DoKS')
+         Read(Value,*) UEGInfo%DoKS
+         !If(DoKS)         Stop 'Not Implemented'
+         If(UEGInfo%DoKS) then
+             UEGInfo%exchangefactor=0.0_pr
+         else
+             UEGInfo%exchangefactor=1.0_pr
+         endif
+        
+        Case ('MadelungFactor')
+         Read(Value,*) UEGInfo%madelungfactor
+                    
+        Case ('DoSingleCalc') 
+         Read(Value,*) UEGInfo%DoSingleCalc
+        
+        Case ('DoSFCalcMP2') 
+            Read(Value,*) UEGInfo%DoSFCalcMP2
+        
+        Case ('DoSFCalcCCD') 
+            Read(Value,*) UEGInfo%DoSFCalcCCD
+        
+        Case ('DoSkipTA') 
+         Read(Value,*) UEGInfo%DoSkipTA
+        
+        Case ('DoOnlyMP2Grid') 
+            Read(Value,*) UEGInfo%DoOnlyMP2Grid ! kills calc after one MP2 calc
+        
+        Case ('Gap') ! for an insulating gas
+         Read(Value,*) UEGInfo%Gap
+                    
+        Case ('fcut') ! for a basis set that scales with the electron number
+         Read(Value,*) UEGInfo%fcut
+        
+        Case ('corefcut') ! for an insulating gas
+         Read(Value,*) UEGInfo%corefcut
+        
+        Case ('fcut2ecut') ! to automatically set the ecut from the fcut
+         Read(Value,*) UEGInfo%fcut2ecut
+         if (UEGInfo%fcut2ecut) then
+            UEGInfo%Nfermi=UEGInfo%NElectron**(2.0_pr/3.0_pr)/4.0_pr ! approximately divided by 4
+            UEGInfo%fcutMultiplier=UEGInfo%fcut
+            if (UEGInfo%fcut < 2.0) then
+               UEGInfo%fcutMultiplier=2.0
+            endif
+            UEGInfo%MaxKPoint=UEGInfo%Nfermi*UEGInfo%fcutMultiplier*2.0_pr
+            if (UEGInfo%Nfermi < 10) then
+               UEGInfo%MaxKPoint=10*UEGInfo%fcutMultiplier*2.0_pr
+            endif
+        endif
+        
+        Case ('GapII') ! for an insulating gas
+         Read(Value,*) UEGInfo%GapII
+                    
+        Case ('EndInput')
+         Read(Value,*) EndInput
+         If(.not.EndInput)         Stop 'EndInput must be T'
+                    
         Case Default   !  Unknown keyword
          ExStatus=1
          write(6,*) Value
@@ -245,9 +339,6 @@
 !  Over to James.  !
 !==================!
 
-      Call Init_HEG_dummy(MaxKPoint,NElectron)
-      NAO = nBasis
-
 1000  Format('Error: Line number ',I4,' of Input not recognized; ',  &
              'subsequent lines not read.')
 1010  Format('Error: Parameter ',A,' not set.')
@@ -268,54 +359,34 @@
       Character (Len=Len(Line))              :: WorkingLine
       Integer :: I, CommentPos, ColonPos
 
-!========================================================================!
-!  Read keywords and values.                                             !
-!------------------------------------------------------------------------!
-! First, check to see if we have a colon to separate keyword from value  !
-! If there's no colon, we do not have a keyword:value pair.              !
-!========================================================================!
-
-      ColonPos = Index(Line,':')
-      If (ColonPos == 0) Then
-        Keyword = "SKIP"
-        Return
-      End If
-
-
-!===============================================!
-!  Replace all control characters with spaces.  !
-!===============================================!
+!==================================================!
+!  Swiped from Paul, reads keywords and values.    !
+!--------------------------------------------------!
+!  Check for comments and convert them to spaces,  !
+!  then turns control characters into spaces       !
+!==================================================!
 
       WorkingLine = Line
+      CommentPos  = Index(WorkingLine,'!')
+      If(CommentPos /= 0) WorkingLine = WorkingLine(1:CommentPos-1)
       Do I = 1,Len(Line)
        If(IAChar(WorkingLine(I:I)) <= 31) WorkingLine(I:I) = ' '
       End Do
 
 
-!===========================================!
-!  Keyword is everything before the colon,  !
-!  and value is everything after it.        !
-!===========================================!
+!=================================================================!
+!  If we have a blank line at this point, we skip this line.      !
+!  Otherwise, we presumably have Keyword: Value and return them.  !
+!=================================================================!
 
+      If(Len_Trim(WorkingLine) == 0) Then
+       KeyWord = 'SKIP'
+       Return
+      End If
+      ColonPos = Index(WorkingLine,':',back=.False.)
       KeyWord = WorkingLine(1:ColonPos-1)
       Value   = WorkingLine(ColonPos+1:)
 
-
-!==================================================================!
-!  For both keyword and value, delete everything after a comment.  !
-!==================================================================!
-
-      CommentPos  = Index(Keyword,'!')
-      If(CommentPos /= 0) Keyword = Keyword(1:CommentPos-1)
-      CommentPos  = Index(Value,'!')
-      If(CommentPos /= 0) Value = Value(1:CommentPos-1)
-
-
-!==================================================!
-!  If the keyword or value is blank, we can skip.  !
-!==================================================!
-
-      If(Len_Trim(Keyword) == 0 .or. Len_Trim(Value) == 0) Keyword = "SKIP"
       Return
       End Subroutine ParseLine
 

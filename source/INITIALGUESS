@@ -1,0 +1,16 @@
+Okay, we'll store three things
+	X = MP2 amplitudes from current rS
+	Y = MP2 amplitudes from previous rS
+	T = CC amplitudes from previous rS, to be overwritten
+
+I will write
+	X = a Y + dX
+where I choose a to minimize dX:
+	dX^2 = (X - a*Y)^2 = X^2 - 2 a X.Y + a^2 Y^2
+which means
+	a = X.Y/Y.Y
+and I will then assume
+	T => a T + dX
+which I can write as
+	T => X + a (T-Y).
+This will serve as a guess except at the first rS, where I'll choose MP2.
