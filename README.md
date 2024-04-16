@@ -1,6 +1,9 @@
 # uegCCD
 Code for calculations on the uniform electron gas
 
+# disclaimer
+This is a beta release
+
 # authors
 2024: William Z. Van Benschoten, James J. Shepherd
 
