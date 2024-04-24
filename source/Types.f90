@@ -9,6 +9,7 @@ Type HEGDataType
     Integer :: Cell
     Real (Kind=pr) :: L
     Real (Kind=pr) :: rS
+    Real (Kind=pr) :: Rc
     Real (Kind=pr) :: Omega
     Real (Kind=pr) :: Madelung
     Real (Kind=pr) :: Density
@@ -74,11 +75,18 @@ Type UEGInfoType
     Logical :: DodRPASOSEX
     Logical :: DoTruncCoulombHF
     Logical :: DoTruncCoulombAll
+    Logical :: DoSphericalTrunc
+    Logical :: DoSphericalTruncV
     Logical :: DoKS
     Logical :: DoSingleCalc
+    Logical :: DoTwistx
+    Logical :: DoTwisty
+    Logical :: DoTwistz
     Logical :: DoSFCalcMP2
     Logical :: DoSFCalcCCD
     Logical :: DoSkipTA
+    Logical :: DoCalcOnlyTAHF
+    Logical :: UseFindTol
 End Type UEGInfoType
 
 Type BasisSet

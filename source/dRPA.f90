@@ -55,7 +55,7 @@ Contains
 !  We use DIIS to converge this better.                  !
 !========================================================!
 
-      Call FindTol(HEGData%rS,TolMax,FailRatio,DenomFactor)
+      Call FindTol(UEGInfo%rS,UEGInfo%UseFindTol,TolMax,FailRatio,DenomFactor)
 
       Write(6,*) 'Doing RPA...'
 ! Allocate space for everything.

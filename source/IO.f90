@@ -15,7 +15,7 @@
       Use Types, only: UegInfoType
       Implicit None
       Type (UEGInfoType), intent(Out) :: UEGInfo
-      Integer, Parameter    :: NParams = 44
+      Integer, Parameter    :: NParams = 51
       Integer, Parameter    :: LName   = 19
       Integer, Parameter    :: LLine   = 79
       Logical               :: Error, Exists
@@ -102,13 +102,19 @@
                     'ExLadders Range    ',    &   ! by analogy to rings 
                     'CoreFactor         ',    &   ! new CAS parameter 
                     'TACalcN            ',    &   ! number of twist angles for TA and cTA
+                    'DoCalcOnlyTAHF     ',    &   ! True if we run TAHF only and stop
                     'DoCalcTACCD        ',    &   ! calculates CCD during TA
                     'DodRPASOSEX        ',    &   ! calculates dRPA+SOSEX instead of CCD
                     'DoTruncCoulombHF   ',    &   ! truncates coulomb intergrals in the HF
                     'DoTruncCoulombAll  ',    &   ! truncates all coulomb integrals
+                    'DoSphericalTrunc   ',    &   ! Use the spherical truncation for X(G) only.
+                    'DoSphericalTruncV  ',    &   ! Use the spherical truncation for V(G) as well.
                     'DoKS               ',    &   ! only KE is included in eigenvalues
                     'MadelungFactor     ',    &   ! multiplies the madelung constant by this number
                     'DoSingleCalc       ',    &   ! 
+                    'DoTwistx           ',    &
+                    'DoTwisty           ',    &
+                    'DoTwistz           ',    &
                     'Gap                ',    &   ! opens a gap in the Fock matrix
                     'fcut               ',    &   ! 
                     'corefcut           ',    &   ! 
@@ -118,6 +124,7 @@
                     'DoSFCalcCCD        ',    &   ! Structure factor for CCD
                     'DoSkipTA           ',    &   ! Do not do TA at all
                     'DoOnlyMP2Grid      ',    &   ! This just calculates the MP2 grid for ML project
+                    'UseFindTol         ',    &   ! If true use the if statements in FindTol, if F ignore.
                     'EndInput           '/)       ! end of input 
 
 !================================================================!
@@ -238,6 +245,9 @@
                     
         Case ('TACalcN') ! number of twists
          Read(Value,*) UEGInfo%TACalcN
+
+        Case ('DoCalcOnlyTAHF')
+         Read(Value,*) UEGInfo%DoCalcOnlyTAHF
                     
         Case ('DodRPASOSEX')
          Read(Value,*) UEGInfo%DodRPASOSEX
@@ -250,6 +260,21 @@
          Read(Value,*) UEGInfo%DoTruncCoulombAll
          If(UEGInfo%DoTruncCoulombAll)         Stop 'Not Implemented'
                     
+        Case ('DoSphericalTrunc') 
+         Read(Value,*) UEGInfo%DoSphericalTrunc
+         If (UEGInfo%DoSphericalTrunc) Then
+            Write(60,*) 'WARNING: Using spherical truncation on X(G) terms, &
+                         this is an experimental feature!'
+         End If
+
+        Case ('DoSphericalTruncV') 
+         Read(Value,*) UEGInfo%DoSphericalTruncV
+         If (UEGInfo%DoSphericalTrunc) Then
+            Write(60,*) 'WARNING: Spherical truncation on V(G) sets SafeERI to &
+                        .false. and is an experimental feature!'
+            UEGInfo%SafeERI = .false.
+         EndIf
+
         Case ('DoKS')
          Read(Value,*) UEGInfo%DoKS
          !If(DoKS)         Stop 'Not Implemented'
@@ -265,6 +290,15 @@
         Case ('DoSingleCalc') 
          Read(Value,*) UEGInfo%DoSingleCalc
         
+        Case ('DoTwistx')
+         Read(Value,*) UEGInfo%DoTwistx
+
+        Case ('DoTwisty')
+         Read(Value,*) UEGInfo%DoTwisty
+
+        Case ('DoTwistz')
+         Read(Value,*) UEGInfo%DoTwistz
+
         Case ('DoSFCalcMP2') 
             Read(Value,*) UEGInfo%DoSFCalcMP2
         
@@ -276,6 +310,9 @@
         
         Case ('DoOnlyMP2Grid') 
             Read(Value,*) UEGInfo%DoOnlyMP2Grid ! kills calc after one MP2 calc
+        
+        Case ('UseFindTol') 
+            Read(Value,*) UEGInfo%UseFindTol ! kills calc after one MP2 calc
         
         Case ('Gap') ! for an insulating gas
          Read(Value,*) UEGInfo%Gap

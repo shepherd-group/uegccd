@@ -9,7 +9,8 @@ private
 
 public :: init_HEG, FindIndex, change_rs, findtol, ChangeTwist, &
           GenerateTwist, dK2, dK2scaled, dK, SendForAllocation, &
-          CasedERI, NoCaseERI, CoreERI, GapERI, BaseERI
+          CasedERI, NoCaseERI, CoreERI, GapERI, BaseERI, &
+          SphericallyTruncatedERI
 
 contains
 
@@ -29,7 +30,15 @@ contains
         
         HEGData%L=HEGData%rS*(4.0_pr/3.0_pr*pi* HEGData%Nel)**(1.0_pr/3.0_pr)
         HEGData%Omega=HEGData%L**3
-        HEGData%Madelung=CalcMadelung(HEGData%Omega,HEGData%L)*UEGInfo%madelungfactor
+
+        if (UEGInfo%DoSphericalTrunc) then
+            HEGData%Rc = (3.0_pr*HEGData%Omega/(4.0_pr*pi))**(1.0_pr/3.0_pr)
+            write(60,*) "Using spherical truncation!"
+            HEGData%Madelung = -2.0_pr * pi * (HEGData%Rc**2.0_pr)/HEGData%Omega
+        else
+            HEGData%Madelung=CalcMadelung(HEGData%Omega,HEGData%L)*UEGInfo%madelungfactor
+        end if
+
         ! The condition on cell is: cell > sqrt(ecut)
         HEGData%Cell=int(sqrt(real(UEGInfo%MaxKPoint,dp)))+3 ! this looks really dodgy to me 
         write(60,*) "Madelung constant calculated as", HEGData%Madelung
@@ -288,20 +297,7 @@ contains
         enddo
 
         ! Form eigenvector array
-        do l1=1,nbasis
-            HEGData%eigen(l1)=0.0_pr
-            HEGData%eigen(l1)=0.5_pr*dot_product(HEGData%kvec(l1,:),HEGData%kvec(l1,:)) ! kinetic
-            do l2=1,HEGData%Nel/2
-                if (l2.ne.l1) then
-                    ! find "q" momentum transfer
-                    qvec=HEGData%kvec(l1,:)-HEGData%kvec(l2,:)
-                    HEGData%eigen(l1)=HEGData%eigen(l1)-(1/HEGData%Omega)*(4.0_pr*pi/dot_product(qvec,qvec))*UEGInfo%exchangefactor
-                else 
-                    HEGData%eigen(l1)=HEGData%eigen(l1)+HEGData%Madelung-UEGInfo%gap ! self-interaction, madelung is a negative constant
-                endif
-            enddo
-            write(60,*) l1, HEGData%nvec(l1,1), HEGData%nvec(l1,2), HEGData%nvec(l1,3), HEGData%eigen(l1) !TODO: edit to include new output
-        enddo
+        call CalculateBasisEigenArray(nbasis,HEGdata,UEGInfo)
         
         HEGData%kPointToBasisFn=0 ! there are some elements which aren't in the basis, these will
                           ! be returned as zero
@@ -315,13 +311,106 @@ contains
                                       G1(l1+offset)%n(3)     ) = l1
         enddo
 
+        if (UEGInfo%DoSphericalTrunc) then
+            HEGData%Rc = (3.0_pr*HEGData%Omega/(4.0_pr*pi))**(1.0_pr/3.0_pr)
+            write(60,*) "Rc:", HEGData%Rc
+        end if
+
         ! Print out E_HF
-        call print_HF(HEGData)
+        call print_HF(HEGData,UEGInfo)
 
         ! G1 is now an unnecessary array
         deallocate(G1)
 
     end subroutine SetupBasis
+
+    subroutine CalculateBasisEigenArray(nbasis,HEGdata,UEGInfo)
+
+        ! Calculate and store the orbital eigenvalues which satisfy
+        ! the Hartree--Fock solution to the Schrödinger equation for a
+        ! basis of plane-wave orbitals in the uniform electron gas.
+
+        Use Types, only: HEGDataType, UEGInfoType
+
+        Type (HEGDataType), Intent(InOut) :: HEGData
+        Type (UEGInfoType), Intent(In) :: UEGInfo
+
+        Integer, intent(In) :: nbasis
+
+        Integer :: l1, l2
+        Real (Kind=pr) :: kinetic, exchange
+
+        HEGData%eigen = 0.0_pr
+
+        do l1=1,nbasis
+            kinetic = calculate_kinetic(l1,HEGData%kvec)
+            HEGData%eigen(l1) = kinetic
+
+            do l2=1,HEGData%Nel/2
+                exchange = calculate_exchange(l1,l2,HEGData%kvec,HEGData%Omega,&
+                                              UEGInfo%exchangefactor,HEGData%Madelung,&
+                                              UEGInfo%gap,UEGInfo%DoSphericalTrunc,&
+                                              HEGData%Rc)
+                HEGData%eigen(l1) = HEGData%eigen(l1) + exchange
+            enddo
+
+            write(60,*) l1, HEGData%nvec(l1,1), HEGData%nvec(l1,2), HEGData%nvec(l1,3), HEGData%eigen(l1)
+        enddo
+
+    end subroutine CalculateBasisEigenArray
+
+    ! Functions for calculating the single particle eigenvalue
+    ! contributions. These are subject to constrains which may or may not
+    ! be applied to the Coulomb kernel which is why they remain separated
+    ! from the Coulomb kernel.
+
+    pure function calculate_kinetic(iorb,kvec) result(kinetic)
+
+        ! A function which calculates the kinetic energy
+        ! associated with a plane-wave orbital in the uniform electron gas.
+
+        Integer, Intent(In) :: iorb
+        Real (Kind=pr), Intent(In) :: kvec(:,:)
+
+        Real (Kind=pr) :: kinetic
+
+        kinetic = 0.0_pr
+
+        kinetic = 0.5_pr * dot_product(kvec(iorb,:), kvec(iorb,:))
+
+    end function calculate_kinetic
+
+    pure function calculate_exchange(iorb,jorb,kvec,Omega,exchangefactor,&
+                                     Madelung,gap,DoSphericalTrunc,Rc) result(exchange)
+
+        ! A function which calculates the exchange contribution
+        ! to an orbital i given an occupied orbital j.
+
+        Integer, Intent(In) :: iorb, jorb
+        Real (Kind=pr), Intent(In) :: kvec(:,:), Omega, exchangefactor, Madelung, gap, Rc
+        Logical, Intent(In) :: DoSphericalTrunc
+
+        Real (Kind=pr) :: exchange
+        Real (Kind=pr) :: qvec(3)
+        Real (Kind=pr) :: G
+
+        exchange = 0.0_pr
+
+        if (iorb /= jorb) then
+            qvec = kvec(iorb,:) - kvec(jorb,:)
+            exchange = -(1.0_pr/Omega)*(4.0_pr*pi/dot_product(qvec, qvec))*exchangefactor
+
+            ! See comments in the SphericallyTruncatedERI function
+            ! for more information.
+            if (DoSphericalTrunc) then
+                G = sqrt(4.0_pr * pi / abs(Omega*exchange/exchangefactor))
+                exchange = exchange*(1.0_pr - cos(G*Rc))
+            end if
+        else
+            exchange = Madelung - gap
+        end if
+
+    end function calculate_exchange
 
     function FcutToBasisFn(ThisFcut,Nel) result(FcutM)
 
@@ -506,43 +595,39 @@ contains
         HEGData%L=HEGData%L*rescale
         HEGData%Omega=HEGData%Omega*rescale**3.0_pr
         HEGData%kvec=HEGData%kvec*(1.0_pr/rescale)
-        HEGData%madelung=CalcMadelung(HEGData%Omega,HEGData%L)*UEGInfo%MadelungFactor
+
+        if (UEGInfo%DoSphericalTrunc) then
+            HEGData%Rc = (3.0_pr*HEGData%Omega/(4.0_pr*pi))**(1.0_pr/3.0_pr)
+            write(60,*) "Rc:", HEGData%Rc
+            HEGData%Madelung = -2.0_pr * pi * (HEGData%Rc**2.0_pr)/HEGData%Omega
+        else
+            HEGData%Madelung=CalcMadelung(HEGData%Omega,HEGData%L)*UEGInfo%madelungfactor
+        end if
+
         HEGData%Density=HEGData%Nel/HEGData%L**3.0_pr
         HEGData%FermiWaveVector=(3.0_pr*pi**2.0_pr*HEGData%Density)**(1.0_pr/3.0_pr)
         HEGData%ScreeningDistance=(4.0_dp/pi*HEGData%FermiWaveVector)**0.5_dp
 
         ! Form eigenvector array
-        HEGData%Eigen=0.0_pr
-        do l1=1,UEGInfo%NAO
-            HEGData%eigen(l1)=0.0_pr
-            HEGData%eigen(l1)=0.5_pr*dot_product(HEGData%kvec(l1,:),HEGData%kvec(l1,:)) ! kinetic
-            do l2=1,HEGData%Nel/2
-                if (l2.ne.l1) then
-                    ! find "q" momentum transfer
-                    qvec=HEGData%kvec(l1,:)-HEGData%kvec(l2,:)
-                    HEGData%eigen(l1)=HEGData%eigen(l1)-(1/HEGData%Omega)*(4.0_pr*pi/dot_product(qvec,qvec))*UEGInfo%ExchangeFactor
-                else 
-                    HEGData%eigen(l1)=HEGData%eigen(l1)+HEGData%Madelung-UEGInfo%Gap ! self-interaction, madelung is a negative constant
-                endif
-            enddo
-            write(60,*) l1, HEGData%nvec(l1,1), HEGData%nvec(l1,2), HEGData%nvec(l1,3), HEGData%eigen(l1)
-        enddo
-        
-        call print_HF(HEGData)
+        call CalculateBasisEigenArray(UEGInfo%NAO,HEGdata,UEGInfo)
+
+        call print_HF(HEGData,UEGInfo)
 
     end subroutine
     
-    subroutine GenerateTwist(HEGData)
+    subroutine GenerateTwist(HEGData, DoTwistx, DoTwisty, DoTwistz)
 
         Use Types, only: HEGDataType
 
         Type (HEGDataType), Intent(InOut) :: HEGData
+
+        Logical, Intent(In) :: DoTwistx, DoTwisty, DoTwistz
     
         write (60,*) "randomizing twist angle"
        
-        HEGData%this_ntwist(1)=rand()-0.5_pr
-        HEGData%this_ntwist(2)=rand()-0.5_pr
-        HEGData%this_ntwist(3)=rand()-0.5_pr
+        If (DoTwistx) HEGData%this_ntwist(1)=rand()-0.5_pr
+        If (DoTwisty) HEGData%this_ntwist(2)=rand()-0.5_pr
+        If (DoTwistz) HEGData%this_ntwist(3)=rand()-0.5_pr
 
         write (60,*) "generated",HEGData%this_ntwist
 
@@ -578,53 +663,66 @@ contains
     end subroutine
 
 
-    subroutine print_HF(HEGData)
+    subroutine print_HF(HEGData,UEGInfo)
 
-        Use Types, only: HEGDataType
+        Use Types, only: HEGDataType, UEGInfoType
 
         Type (HEGDataType), Intent(InOut) :: HEGData
+        Type (UEGInfoType), Intent(In) :: UEGInfo
 
         Integer :: l1, l2
-        Real (Kind=pr) :: qvec(3)
+        Real (Kind=pr) :: kinetic, exchange
 
         ! Print out E_HF
-        HEGData%EHF=0.0_pr
-        HEGData%XHF=0.0_pr
+        HEGData%EHF = 0.0_pr
+        HEGData%XHF = 0.0_pr
+
         do l1=1,HEGData%Nel/2
-            HEGData%EHF=HEGData%EHF+0.5_pr*dot_product(HEGData%kvec(l1,:),HEGData%kvec(l1,:))
+            kinetic = calculate_kinetic(l1,HEGData%kvec)
+
+            HEGData%EHF = HEGData%EHF + kinetic
+
             do l2=1,HEGData%Nel/2
-                if (l2.ne.l1) then
-                    qvec=HEGData%kvec(l1,:)-HEGData%kvec(l2,:)
-                    HEGData%EHF=HEGData%EHF-0.5_pr*(1/HEGData%Omega)*(4.0_pr*pi/dot_product(qvec,qvec))
-                    HEGData%XHF=HEGData%XHF-0.5_pr*(1/HEGData%Omega)*(4.0_pr*pi/dot_product(qvec,qvec))
-                endif
+                ! We send the Madelung as the gap so if l1 == l2 the
+                ! exchange is zero.
+                exchange = calculate_exchange(l1,l2,HEGData%kvec,HEGData%Omega,&
+                                              1.0_pr,HEGData%Madelung,HEGData%Madelung,&
+                                              UEGInfo%DoSphericalTrunc,HEGData%Rc)
+
+                HEGData%EHF = HEGData%EHF + 0.5_pr*exchange
+                HEGData%XHF = HEGData%XHF + 0.5_pr*exchange
             enddo
         enddo
-        HEGData%EHF=HEGData%EHF*2.0_pr
-        HEGData%XHF=HEGData%XHF*2.0_pr
+
+        HEGData%EHF = HEGData%EHF*2.0_pr
+        HEGData%XHF = HEGData%XHF*2.0_pr
+
         write(60,*) "L:", HEGData%L
         write(60,*) "Omega:", HEGData%Omega
         write(60,*) "cell:", HEGData%Cell
         write(60,*) "HF energy:", HEGData%EHF/HEGData%Nel+HEGData%Madelung/2.0
         write(60,*) "Exchange energy:", HEGData%XHF/HEGData%Nel+HEGData%Madelung/2.0
         write(60,*) "Madelung:", HEGData%Madelung
+
         HEGData%EHF = HEGData%EHF + HEGData%Madelung*F12*HEGData%Nel
 
-        call print_ex_SF(HEGData)
+        call print_ex_SF(HEGData,UEGInfo)
 
     end subroutine print_HF
     
-    subroutine print_ex_SF(HEGData)
+    subroutine print_ex_SF(HEGData,UEGInfo)
 
-        Use Types, Only: HEGDataType
+        Use Types, only: HEGDataType, UEGInfoType
 
         Type (HEGDataType), Intent(InOut) :: HEGData
+        Type (UEGInfoType), Intent(In) :: UEGInfo
 
         integer :: l1, l2, I, J, A
         integer :: qvec(3)
         integer :: qvec_max(3), maxq
         integer, allocatable :: ExSf(:,:,:)
         real(pr), allocatable :: ExV(:,:,:)
+        Real (Kind=pr) :: exchange
 
         qvec_max=0
         
@@ -649,9 +747,12 @@ contains
                 if (l2.ne.l1) then
                     qvec=HEGData%nVec(l1,:)-HEGData%nVec(l2,:)
                     ExSf(qvec(1),qvec(2),qvec(3))=ExSf(qvec(1),qvec(2),qvec(3))+1
-                    ExV(qvec(1),qvec(2),qvec(3))=(1/HEGData%Omega)*&
-                        (4.0_pr*pi/dot_product(HEGData%kvec(l1,:)-HEGData%kvec(l2,:), &
-                                               HEGData%kvec(l1,:)-HEGData%kvec(l2,:)))
+
+                    exchange = calculate_exchange(l1,l2,HEGData%kvec,HEGData%Omega,&
+                                                  1.0_pr,HEGData%Madelung,HEGData%Madelung,&
+                                                  UEGInfo%DoSphericalTrunc,HEGData%Rc)
+
+                    ExV(qvec(1),qvec(2),qvec(3)) = -exchange
                 endif
             enddo
         enddo
@@ -977,6 +1078,50 @@ contains
 
     End Function BaseERI
 
+    Pure Function SphericallyTruncatedERI(HEGData,UEGInfo,A,B,I,J,DummyFlag) Result(Intgrl)
+
+        ! Take in four orbital indices and calculate the
+        ! two-particle integral for the UEG assuming a spherical
+        ! truncation.
+        !
+        ! For more details see: http://dx.doi.org/10.1103/PhysRevB.77.193110
+        !
+        ! In:
+        !    i, j, a, b : int
+        !        Orbital indices for the two-particle integral.
+        !    dummy_flag : int
+        !        Not used in the plain integral routine!
+        ! Out:
+        !    intgrl : float
+        !        The two-particle integrals.
+
+        Use Types, Only: HEGDataType, UEGInfoType
+
+        Type (HEGDataType), Intent(In) :: HEGData
+        Type (UEGInfoType), Intent(In) :: UEGInfo
+
+        Integer, Intent(In) :: I, J, A, B
+        Integer, Intent(In), Optional :: DummyFlag
+
+        Integer :: qvec(3)
+        Real (Kind=pr) :: Intgrl, qvec2, G
+
+        qvec=-HEGData%nvec(i,:)+HEGData%nvec(a,:)
+        if ((qvec(1).eq.0).and.(qvec(2).eq.0).and.(qvec(3).eq.0)) then
+            Intgrl=-HEGData%Madelung
+        else
+            ! Normally, V(G) = 4 \pi / G
+            qvec2=dot_product(qvec,qvec)
+            Intgrl= One/(HEGData%L*Pi*qvec2)
+            ! In truncation, we instead have:
+            ! V(G) = (4 \pi / G)[1 - cos(G Rc)]
+            ! Need to account for 1/Omega here as well.
+            G = sqrt(4.0_pr * pi / (HEGData%Omega*Intgrl))
+            Intgrl = Intgrl*(1.0_pr - cos(G*HEGData%Rc))
+        endif
+
+    End Function SphericallyTruncatedERI
+
     ! Modified form of ERI function above
     ! ===================================
     ! This takes FOUR INTEGER ORBITAL INDICES and returns the squared momentum value
@@ -1069,18 +1214,26 @@ contains
     End Subroutine SendForAllocation
 
 
-    Subroutine FindTol(rs,TolMax,FailRatio,DenomFactor)
+    Subroutine FindTol(rs,UseFindTol,TolMax,FailRatio,DenomFactor)
 
         Real (Kind=pr), Intent(In) :: rs
+        Logical, Intent(In) :: UseFindTol
         Real (Kind=pr), Intent(InOut) :: TolMax, FailRatio, DenomFactor
 
         TolMax = 1.0E-8_pr
         FailRatio = 100
-        if (rs.gt.5.1_pr) TolMax = 1.0E-6_pr
-        if (rs.gt.5.1_pr) denomfactor=5.0_pr
-        if (rs.gt.9.9_pr) TolMax = 1.0E-5_pr
-        if (rs.gt.80.0_pr) TolMax = 1.0E-3_pr
-        if (rs.lt.0.95_pr) FailRatio = 1E6
+
+        If (UseFindTol) Then
+            if (rs.gt.5.1_pr) TolMax = 1.0E-6_pr
+            if (rs.gt.5.1_pr) denomfactor=5.0_pr
+            if (rs.gt.9.9_pr) TolMax = 1.0E-5_pr
+            if (rs.gt.80.0_pr) TolMax = 1.0E-3_pr
+            if (rs.lt.0.95_pr) FailRatio = 1.0E6_pr
+        End If
+
+        Write(60, *) '# Using TolMax = ', TolMax, &
+            ' and FailRatio = ', FailRatio, &
+            ' and DenomFactor = ', DenomFactor
 
     End Subroutine FindTol
     

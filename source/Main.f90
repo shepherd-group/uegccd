@@ -15,6 +15,7 @@
       Type (TwistAngleCalculation) :: TwistAverages
       Type (TwistAngleData), Allocatable :: TwistData(:)
       Real (Kind=pr) :: rS
+      Integer :: iRSPoint
 ! Correlated stuff
       Real (Kind=pr), Allocatable :: T2aaaa(:,:,:), T2abab(:,:,:), T2abba(:,:,:)
       Real (Kind=pr), Allocatable :: X2aaaa(:,:,:), X2abab(:,:,:), X2abba(:,:,:)
@@ -29,6 +30,9 @@
       integer,parameter :: seed = 86456
       real(pr) :: ConnectivityDiff(400)
       real(pr) :: ConnectivityDiff2
+      Real (kind=pr) :: TwistAveragedEnergies(2,4)
+
+      TwistAveragedEnergies = 0.0_pr
 
 !==========================================!
 !  This code implements RHF-based CCD.     !
@@ -70,27 +74,36 @@
 ! - "Characteristic momentum vector"
 
 
-!===============================!
-!  Loop over rS values and go.  !
-!===============================!
-
+      ! Set the system rs
       UEGInfo%rS = UEGInfo%rSMin
-      Call change_rs(HEGData,UEGInfo)
+      call change_rs(HEGData,UEGInfo)
 
       call srand(seed)
 
+      ! If we are only doing TAHF, run that and stop.
+      If (UEGInfo%DoCalcOnlyTAHF) then
+          Do iTwist = 1, UEGInfo%TACalcN
+              Call GenerateTwist(HEGData,UEGInfo%DoTwistx,UEGInfo%DoTwisty,UEGInfo%DoTwistz) ! TODO: this needs testing
+              Call ChangeTwist(HEGData,UEGInfo) ! TODO : this needs testing
+              Call WriteTwistData(iTwist,HEGData,UEGInfo,TwistAveragedEnergies)
+          End Do
+          ! We are done, stop the program.
+          Call SuccessfulDeallocateAndStop(T2aaaa,T2abab,T2abba,X2aaaa,X2abab,X2abba)
+      End If
+
       if (UEGInfo%DoSingleCalc) then 
           Call DrvMBPT(HEGData,UEGInfo,X2aaaa,X2abab,X2abba)
+
           T2aaaa = X2aaaa
           T2abab = X2abab
           T2abba = X2abba
+
           if (.not.UEGInfo%DodRPASOSEX) then
               Call DrvCCD(HEGData,UEGInfo,T2aaaa,T2abab,T2abba)
           else
               Call DrvdRPA(HEGData,UEGInfo,T2aaaa)
           endif
       endif
-
       if (UEGInfo%DoSkipTA) then
           Stop "Finishing calculation after single point calculation"
       endif
@@ -105,13 +118,19 @@
       TwistAverages%HfSum2=0.0_pr
       TwistAverages%NTwistSum2=0.0_pr
       TwistAverages%ConnectivitySum=0
+
       ! set in code, but could be set in input file    
       TwistAverages%NumTwists=UEGInfo%TACalcN
       allocate(TwistData(TwistAverages%NumTwists))
+
+      ! Loop through each twist
       Do iTwist = 1,TwistAverages%NumTwists
           write(60,*) iTwist,"of", TwistAverages%NumTwists
-          Call GenerateTwist(HEGData) ! TODO: this needs testing
+          Call GenerateTwist(HEGData,UEGInfo%DoTwistx,UEGInfo%DoTwisty,UEGInfo%DoTwistz) ! TODO: this needs testing
           Call ChangeTwist(HEGData,UEGInfo) ! TODO : this needs testing
+
+          Call WriteTwistData(iTwist,HEGData,UEGInfo,TwistAveragedEnergies)
+
           TwistData(iTwist)%ntwist = HEGData%ntwist
           If (iTwist == 1) Then
               write(60,*)"EIGEN",size(HEGData%Eigen)
@@ -121,6 +140,7 @@
               Allocate(TwistAverages%EigenAverage(TwistAverages%EigenLength))
               TwistAverages%EigenAverage=0.0_pr
           End If
+
           Allocate(TwistData(iTwist)%Eigen(TwistAverages%EigenLength))
           Call DrvMBPT(HEGData,UEGInfo,X2aaaa,X2abab,X2abba,Conn=TwistData(iTwist)%Connectivity)
           TwistData(iTwist)%Eigen=HEGData%Eigen
@@ -138,7 +158,6 @@
                   Call DrvdRPA(HEGData,UEGInfo,T2aaaa)
               endif
           endif
-
           TwistData(iTwist)%ccd=HEGData%ECorr
           write(59,*) TwistData(iTwist)%ntwist, TwistData(iTwist)%hf,TwistData(iTwist)%mp2, TwistData(iTwist)%ccd
           If (iTwist == 1) Then
@@ -231,54 +250,42 @@
 
       HEGData%this_ntwist = TwistAverages%SpecialTwistAngle
       Call ChangeTwist(HEGData,UEGInfo)
-      Do iRSPoint = 1,UEGInfo%NumRSPoints
-        !If (UEGInfo%NumRSPoints.eq.1) Then
-        !  rS=UEGInfo%rSMin
-        !Else
-        !  rS = UEGInfo%rSMin + (iRSPoint-1)*(UEGInfo%rSMax-UEGInfo%rSMin)/(UEGInfo%NumRSPoints-1)
-        !End If
-        !UEGInfo%rS=rS
-        !Call change_rs(HEGData,UEGInfo)
-        HEGData%Eigen = TwistAverages%EigenAverage 
-        Call DrvMBPT(HEGData,UEGInfo,X2aaaa,X2abab,X2abba)
-        If(iRSPoint == 1) Then
-          T2aaaa = X2aaaa
-          T2abab = X2abab
-          T2abba = X2abba
-        End If
-        if (.not.UEGInfo%DodRPASOSEX) then
-            Call DrvCCD(HEGData,UEGInfo,T2aaaa,T2abab,T2abba)
-        else
-            Call DrvdRPA(HEGData,UEGInfo,T2aaaa)
-        endif
-      End Do
+
+      HEGData%Eigen = TwistAverages%EigenAverage 
+      Call DrvMBPT(HEGData,UEGInfo,X2aaaa,X2abab,X2abba)
+
+      T2aaaa = X2aaaa
+      T2abab = X2abab
+      T2abba = X2abba
+
+      if (.not.UEGInfo%DodRPASOSEX) then
+          Call DrvCCD(HEGData,UEGInfo,T2aaaa,T2abab,T2abba)
+      else
+          Call DrvdRPA(HEGData,UEGInfo,T2aaaa)
+      endif
 
 
 !==============================================!
 !  Lastly, deallocate memory and exit safely.  !
 !==============================================!
 
-      DeAllocate(T2aaaa,    Stat=IAlloc(1))
-      DeAllocate(T2abab,    Stat=IAlloc(2))
-      DeAllocate(T2abba,    Stat=IAlloc(3))
-      DeAllocate(X2aaaa,    Stat=IAlloc(4))
-      DeAllocate(X2abab,    Stat=IAlloc(5))
-      DeAllocate(X2abba,    Stat=IAlloc(6))
-      If(Any(IAlloc /= 0)) Stop "Could not deallocate in main"
-
-      Stop
+      Call SuccessfulDeallocateAndStop(T2aaaa,T2abab,T2abba,X2aaaa,X2abab,X2abba)
 
       Contains
 
         Subroutine SetPointers(UEGInfo)
 
-          Use HEG, only: CasedERI, NoCaseERI, CoreERI, GapERI, BaseERI
+          Use HEG, only: CasedERI, NoCaseERI, CoreERI, GapERI, BaseERI, SphericallyTruncatedERI
           Use Types, Only: UEGInfoType
           Use Pointers
 
           Type (UEGInfoType), Intent(In) :: UEGInfo
 
           Integer :: SumRange
+
+          Logical :: SetSphericallyTruncPointer
+
+          SetSphericallyTruncPointer = .false.
 
           SumRange = 0
           SumRange = SumRange + Abs(UEGInfo%IRangeRing)
@@ -304,17 +311,126 @@
             ! We can ignore the DummyFlag checks
             ERI => NoCaseERI
           Else If (UEGInfo%CoreN > 0) Then
-            ! We only consider CoreN + Sanity Checks
+            ! We only consider CoreN + Consistency Checks
             ERI => CoreERI
           Else If (UEGInfo%GapII > 0.0_pr) Then
-            ! We only consider Gap + Sanity Checks
+            ! We only consider Gap + Consistency Checks
             ERI => GapERI
+          Else If (UEGInfo%DoSphericalTruncV) Then
+            ERI => SphericallyTruncatedERI
+            SetSphericallyTruncPointer = .true.
           Else
             ! No checks at all, be warned!
             ERI => BaseEri
           End If
 
+          If (UEGInfo%DoSphericalTruncV .and. .not. SetSphericallyTruncPointer) then
+            Error Stop 'Failed to set the Spherical Truncation ERI pointer!'
+          End If
+
         End Subroutine SetPointers
+
+
+        Subroutine WriteTwistData(iTwist,HEGData,UEGInfo,TAE)
+
+          ! Write the offset specific kinetic, exchange,
+          ! and Hartree--Fock energy to fort.97. At the end
+          ! write the twist averaged quantities as well.
+
+          Use Types, only: HEGDataType, UEGInfoType
+
+          Type (HEGDataType), Intent(In) :: HEGData
+          Type (UEGInfoType), Intent(In) :: UEGInfo
+
+          Integer, Intent(In) :: iTwist
+          Real (Kind=pr), Intent(InOut) :: TAE(2,4)
+
+          Real (Kind=pr) :: kinetic, exchange, total, Ncalcs
+
+          kinetic = (HEGData%EHF - HEGData%XHF)/HEGData%Nel - HEGData%Madelung/2.0_pr
+          exchange = HEGData%XHF/HEGData%Nel + HEGData%Madelung/2.0_pr
+          total = HEGData%EHF - HEGData%Madelung*HEGData%Nel/2.0_pr
+          total = total/HEGData%Nel + HEGData%Madelung/2.0_pr
+
+          ! Write the header
+          If (iTwist == 1) Then
+              TAE = 0.0_pr
+              Write(97, '(1X, "# Offset energy table")')
+              Write(97, '(1X, "# -------------------")')
+              Write(97, '(1X, A10, 4(A26))') '#    Twist', &
+                  'Kinetic', 'Exchange', 'Total', 'Madelung'
+          End If
+
+          ! Update the running total for averaging at the end
+          TAE(1,1) = TAE(1,1) + kinetic
+          TAE(1,2) = TAE(1,2) + exchange
+          TAE(1,3) = TAE(1,3) + total
+          TAE(1,4) = TAE(1,4) + HEGData%Madelung
+          TAE(2,1) = TAE(2,1) + kinetic**2.0_pr
+          TAE(2,2) = TAE(2,2) + exchange**2.0_pr
+          TAE(2,3) = TAE(2,3) + total**2.0_pr
+          TAE(2,4) = TAE(2,4) + HEGData%Madelung**2.0_pr
+
+          ! Write out the current off-set energies
+          Write(97, '(1X, I10, 4(F26.16))') iTwist, &
+              kinetic, exchange, total, HEGData%Madelung
+
+          ! If this is the last off-set to run, report the averaged energies.
+          If (iTwist == UEGInfo%TACalcN) Then
+              Write(97, '()')
+              Write(97, '(1X, "# Twist averaged energies and errors")')
+              Write(97, '(1X, "# ----------------------------------")')
+              Ncalcs = Real(UEGInfo%TACalcN, pr)
+              TAE(1,1) = TAE(1,1)/Ncalcs
+              TAE(1,2) = TAE(1,2)/Ncalcs
+              TAE(1,3) = TAE(1,3)/Ncalcs
+              TAE(1,4) = TAE(1,4)/Ncalcs
+              TAE(2,1) = TAE(2,1) - Ncalcs*(TAE(1,1)**2.0_pr)
+              TAE(2,2) = TAE(2,2) - Ncalcs*(TAE(1,2)**2.0_pr)
+              TAE(2,3) = TAE(2,3) - Ncalcs*(TAE(1,3)**2.0_pr)
+              TAE(2,4) = TAE(2,4) - Ncalcs*(TAE(1,4)**2.0_pr)
+              TAE(2,1) = (TAE(2,1)/(Ncalcs - 1.0_pr))**0.5_pr
+              TAE(2,2) = (TAE(2,2)/(Ncalcs - 1.0_pr))**0.5_pr
+              TAE(2,3) = (TAE(2,3)/(Ncalcs - 1.0_pr))**0.5_pr
+              TAE(2,4) = (TAE(2,4)/(Ncalcs - 1.0_pr))**0.5_pr
+              TAE(2,1) = TAE(2,1)/(Ncalcs**0.5_pr)
+              TAE(2,2) = TAE(2,2)/(Ncalcs**0.5_pr)
+              TAE(2,3) = TAE(2,3)/(Ncalcs**0.5_pr)
+              TAE(2,4) = TAE(2,4)/(Ncalcs**0.5_pr)
+              Write(97, '(1X, A10, 4(A26))') '#         ', &
+                  'Kinetic', 'Exchange', 'Total', 'Madelung'
+              Write(97, '(1X, A10, 4(F26.16))') 'Average:', TAE(1,:)
+              Write(97, '(1X, A10, 4(F26.16))') 'Error:', TAE(2,:)
+          End If
+
+        End Subroutine WriteTwistData
+
+
+        Subroutine SuccessfulDeallocateAndStop(T2aaaa,T2abab,T2abba,&
+                                               X2aaaa,X2abab,X2abba)
+
+          Real (Kind=pr), Allocatable, Intent(InOut) :: T2aaaa(:,:,:), T2abab(:,:,:), &
+                                                        T2abba(:,:,:), X2aaaa(:,:,:), &
+                                                        X2abab(:,:,:), X2abba(:,:,:)
+
+          Integer :: IAlloc(6)
+
+          IAlloc = 0
+
+          DeAllocate(T2aaaa, Stat=IAlloc(1))
+          DeAllocate(T2abab, Stat=IAlloc(2))
+          DeAllocate(T2abba, Stat=IAlloc(3))
+          DeAllocate(X2aaaa, Stat=IAlloc(4))
+          DeAllocate(X2abab, Stat=IAlloc(5))
+          DeAllocate(X2abba, Stat=IAlloc(6))
+
+          If (Any(IAlloc /= 0)) Then
+              Error Stop "ERROR: Could not deallocate in main"
+          Else
+              Stop
+          End If
+
+        End Subroutine SuccessfulDeallocateAndStop
 
       End Program TermedCC
 
