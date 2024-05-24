@@ -24,6 +24,7 @@
       !Logical, Parameter :: T = .true., F=.false.
 ! Twist angle stuff
 
+      Integer :: iRSPoint
       Integer :: iTwist
       Integer :: iConnPoints, iConnMax
       integer,parameter :: seed = 86456
