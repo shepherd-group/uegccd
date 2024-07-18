@@ -1,6 +1,7 @@
 import os.path as path
 import numpy as np
 import math
+import pytest
 
 class Dataset():
 	def __init__(self, dir=""):
@@ -64,20 +65,18 @@ class Dataset():
 					postNOcc = False
 					blocks.append({
 						"E(SCF)" : float(l.split()[2]),
-						"Eig Pre-NOcc": [],
-						"Eig Post-NOcc": []
+						"Eigenvalues": [],
 						})
 				elif "E(SCF) + E(2) is" in l:
 					# end of block
 					assert math.isclose(float(l.split()[4]),
 					 blocks[cur_blc]["E(SCF)"] + blocks[cur_blc]["E(2)"]), f"Error reading entry {cur_blc} in file {file}."
-					blocks[cur_blc]["Eig Pre-NOcc"] = np.array(blocks[cur_blc]["Eig Pre-NOcc"])
-					blocks[cur_blc]["Eig Post-NOcc"] = np.array(blocks[cur_blc]["Eig Post-NOcc"])
+					blocks[cur_blc]["Eigenvalues"] = np.array(blocks[cur_blc]["Eigenvalues"])
 				elif "E(2) is" in l:
 					blocks[cur_blc]["E(2)"] = float(l.split()[2])
 				elif l.strip() == '-'*24:
-					# Switch from NOcc to rest of eigenvalues
-					postNOcc = True
+					# Ignore
+					continue
 
 				# Lines with data tables
 				else:
@@ -87,11 +86,8 @@ class Dataset():
 					if len(data) == 1:
 						# Eigenvalue
 						eig = float(data[0])
-						if postNOcc:
-							blocks[cur_blc]["Eig Post-NOcc"].append(eig)
-						else:
-							blocks[cur_blc]["Eig Pre-NOcc"].append(eig)
-
+						blocks[cur_blc]["Eigenvalues"].append(eig)
+						
 					elif len(data) == 3:
 						eng = float(data[0])
 						itr = float(data[1])
@@ -321,6 +317,14 @@ class Dataset():
 
 	def _load_fort61(self):
 		pass
+
+	def test_summary(self):
+		"""
+		Return a dictionary with summarizing information for testing purposes.
+		"""
+		results = {'Final CCD Energy': self.summary["Final CCD Energy"],}
+
+		return results
 
 if __name__ == "__main__":
 	dir = "N_00014_0002/"

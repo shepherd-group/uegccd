@@ -2,4 +2,7 @@ Output
 fort.*
 
 __pycache__/
-.vscode
+.vscode/
+.pytest_cache/
+*.egg-info/
+build/
