@@ -5,6 +5,9 @@ import pytest
 
 class Dataset():
 	def __init__(self, dir=""):
+		"""
+		Load the output files associated 
+		"""
 		self.dir = path.expanduser(dir)
 		self._load_Output()
 		self._load_fort59()
@@ -16,9 +19,9 @@ class Dataset():
 		file = path.join(self.dir, "Output")
 
 		summary = {
-			"CCD Energy": [],
-			"Iteration": [],
-			"Biggest Change": []
+			"correlation energies": [],
+			"iterations": [],
+			"biggest changes": []
 			}
 		blocks = []
 		cur_blc = -1
@@ -49,14 +52,14 @@ class Dataset():
 
 				# Lines with summary info
 				elif "CCD has converged" in l:
-					summary["Total Iterations"] = int(l.split()[4])
+					summary["total iterations"] = int(l.split()[4])
 				elif "Ec(CCD) is" in l:
 					# correlation energy; primary output
-					summary["Ec(CCD)"] = float(l.split()[2])
+					summary["final correlation energy"] = float(l.split()[2])
 				elif "Final CCD Energy is" in l:
-					summary["Final CCD Energy"] = float(l.split()[4])
+					summary["final CCD energy"] = float(l.split()[4])
 				elif "Max CCD Residual is" in l:
-					summary["Max CCD Residual"] = float(l.split()[4])
+					summary["max CCD residual"] = float(l.split()[4])
 				
 				# Line in eigenvalue blocks
 				elif "E(SCF) is" in l: 
@@ -65,13 +68,13 @@ class Dataset():
 					postNOcc = False
 					blocks.append({
 						"E(SCF)" : float(l.split()[2]),
-						"Eigenvalues": [],
+						"eigenvalues": [],
 						})
 				elif "E(SCF) + E(2) is" in l:
 					# end of block
 					assert math.isclose(float(l.split()[4]),
 					 blocks[cur_blc]["E(SCF)"] + blocks[cur_blc]["E(2)"]), f"Error reading entry {cur_blc} in file {file}."
-					blocks[cur_blc]["Eigenvalues"] = np.array(blocks[cur_blc]["Eigenvalues"])
+					blocks[cur_blc]["eigenvalues"] = np.array(blocks[cur_blc]["eigenvalues"])
 				elif "E(2) is" in l:
 					blocks[cur_blc]["E(2)"] = float(l.split()[2])
 				elif l.strip() == '-'*24:
@@ -86,23 +89,23 @@ class Dataset():
 					if len(data) == 1:
 						# Eigenvalue
 						eig = float(data[0])
-						blocks[cur_blc]["Eigenvalues"].append(eig)
+						blocks[cur_blc]["eigenvalues"].append(eig)
 						
 					elif len(data) == 3:
 						eng = float(data[0])
 						itr = float(data[1])
 						chg = float(data[2])
-						summary["CCD Energy"].append(eng)
-						summary["Iteration"].append(itr)
-						summary["Biggest Change"].append(chg)
+						summary["correlation energies"].append(eng)
+						summary["iterations"].append(itr)
+						summary["biggest changes"].append(chg)
 
 					else:
 						raise RuntimeError(f"File {file} contains unrecognized line:\n{l}")
 		
 		# Final data structure cleanup
-		summary["CCD Energy"] = np.array(summary["CCD Energy"])
-		summary["Iteration"] = np.array(summary["Iteration"])
-		summary["Biggest Change"] = np.array(summary["Biggest Change"])
+		summary["correlation energies"] = np.array(summary["correlation energies"])
+		summary["iterations"] = np.array(summary["iterations"])
+		summary["biggest changes"] = np.array(summary["biggest changes"])
 
 		self.eigenvalues = blocks
 		self.summary = summary
@@ -135,9 +138,9 @@ class Dataset():
 					# but let's be flexible by counting backwards
 					sq_avg = {
 						"ntwist": np.array([float(s) for s in data[:-5]]),
-						"hf": float(data[-5]),
-						"mp2": float(data[-4]),
-						"ccd": float(data[-3])
+						"HF": float(data[-5]),
+						"MP2": float(data[-4]),
+						"CCD": float(data[-3])
 					}
 
 				elif "eigenvalue averages" in line:
@@ -148,9 +151,9 @@ class Dataset():
 					# but let's be flexible by counting backwards
 					avg = {
 						"ntwist": np.array([float(s) for s in data[:-4]]),
-						"hf": float(data[-4]),
-						"mp2": float(data[-3]),
-						"ccd": float(data[-2])
+						"HF": float(data[-4]),
+						"MP2": float(data[-3]),
+						"CCD": float(data[-2])
 					}
 
 				elif "errors" in line:
@@ -158,9 +161,9 @@ class Dataset():
 					# but let's be flexible by counting backwards
 					err = {
 						"ntwist": np.array([float(s) for s in data[:-4]]),
-						"hf": float(data[-4]),
-						"mp2": float(data[-3]),
-						"ccd": float(data[-2])
+						"HF": float(data[-4]),
+						"MP2": float(data[-3]),
+						"CCD": float(data[-2])
 					}
 
 				elif "conn" in line:
@@ -181,16 +184,19 @@ class Dataset():
 						itwist.append(int(data[0]))
 						conn_diff.append(float(data[1]))
 
+					else:
+						raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
+
 		self.twist = {
 			"ntwist": np.array(ntwist),
-			"hf": np.array(hf),
-			"mp2": np.array(mp2),
-			"ccd": np.array(ccd),
+			"HF": np.array(hf),
+			"MP2": np.array(mp2),
+			"CCD": np.array(ccd),
 			"averages": avg,
 			"squared averages": sq_avg,
 			"errors": err,
 			"eigenvalue averages": eig_avg,
-			"connectivity average": conn,
+			"connectivity averages": conn,
 			"itwist": np.array(itwist),
 			"connectivity diff squared": np.array(conn_diff),
 			"special twist angle": special,
@@ -207,8 +213,7 @@ class Dataset():
 			"culm": [],
 			"culm*2": [],
 		}
-		mdlg_blcs = []
-		cur_mdlg = -1
+		init_pass = True
 
 		with open(file) as f:
 			for line in f:
@@ -237,52 +242,50 @@ class Dataset():
 					basis_block = True
 
 				# Lines in a Madelung constant block
-				# !!! There's additional data in the second Madelung block !!!
 				elif "kappa taken from" in l:
 					# use a start of Madelung block
-					cur_mdlg += 1
-					mdlg_blcs.append({
+					mdlg_blc = {
 						"kappa": float(l.split()[-1]),
 						"reciprocal space iterations": [],
 						"real space iterations": []
-					})
+					}
 				elif "term2" in l:
-					mdlg_blcs[cur_mdlg]["term2"] = float(l.split()[0])
+					mdlg_blc["term2"] = float(l.split()[0])
 				elif "term4" in l:
 					# this line also signifies start of iterations
 					# for the reciprocal space term
-					mdlg_blcs[cur_mdlg]["term4"] = float(l.split()[0])
+					mdlg_blc["term4"] = float(l.split()[0])
 					reciprocal_block = True
 				elif "reciprocal space" in l:
 					# clean up iteration data structure
-					block_data = np.array(mdlg_blcs[cur_mdlg]["reciprocal space iterations"])
-					mdlg_blcs[cur_mdlg]["reciprocal space iterations"] = block_data
+					block_data = np.array(mdlg_blc["reciprocal space iterations"])
+					mdlg_blc["reciprocal space iterations"] = block_data
 					
 					# check final reciprocal space value
 					final = float(l.split()[-1])
 					assert math.isclose(final, block_data[-1,-1])
-					mdlg_blcs[cur_mdlg]["reciprocal space"] = final # save separately for easier access
+					mdlg_blc["reciprocal space"] = final # save separately for easier access
 					
 					# switch block type
 					reciprocal_block = False
 					real_block = True
 				elif "real space" in l:
 					# clean up iteration data structure
-					block_data = np.array(mdlg_blcs[cur_mdlg]["real space iterations"])
-					mdlg_blcs[cur_mdlg]["real space iterations"] = block_data
+					block_data = np.array(mdlg_blc["real space iterations"])
+					mdlg_blc["real space iterations"] = block_data
 
 					# check final real space value
 					final = float(l.split()[-1])
 					assert math.isclose(final, block_data[-1,-1])
-					mdlg_blcs[cur_mdlg]["real space"] = final # save separately for easier access
+					mdlg_blc["real space"] = final # save separately for easier access
 
 					# end block
 					real_block = False
 				elif "Madelung constant calculated as" in l:
-					mdlg_blcs[cur_mdlg]["Madelung constant"] = l.split()[-1]
-					# !!! This line is not in second Madelung block !!!
-					# it is only printed after contents of first block (CalcMadelung)
-					# The Madelung block is first printed during initialization
+					# Finish with the initial pass
+					init_pass = False
+					mdlg_blc["Madelung constant"] = l.split()[-1]
+					init = mdlg_blc
 
 				# Lines with data tables
 				else:
@@ -295,12 +298,12 @@ class Dataset():
 					elif reciprocal_block:
 						data = l.split()
 						data_flt = (float(data[0]), float(data[1]))
-						mdlg_blcs[cur_mdlg]["reciprocal space iterations"].append(data_flt)
+						mdlg_blc["reciprocal space iterations"].append(data_flt)
 
 					elif real_block:
 						data = l.split()
 						data_flt = (float(data[0]), float(data[1]))
-						mdlg_blcs[cur_mdlg]["real space iterations"].append(data_flt)
+						mdlg_blc["real space iterations"].append(data_flt)
 
 					else:
 						pass # ignore the rest of the file for now
@@ -312,20 +315,88 @@ class Dataset():
 		basis["culm*2"] = np.array(basis["culm*2"])
 		self.heg = {
 			"basis": basis,
-			"Madelung blocks": mdlg_blcs,
+			"initialization": init,
 		}
 
 	def _load_fort61(self):
-		pass
+
+		file = path.join(self.dir, "fort.61")
+		with open(file) as f:
+			for line in f:
+
+				data = line.split()
+
+				if "core" in line:
+					core = int(data[0])
+				elif "active" in line:
+					active = int(data[0])
+				else:
+					raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
+
+		self.io = {
+			'core electrons': core,
+			'active electrons': active}
 
 	def test_summary(self):
 		"""
 		Return a dictionary with summarizing information for testing purposes.
+
+		Values stored in this dictionary should reflect the breadth of uegCCD's capabilities.
+		This dictionary is used with pytest's pytest-regression's extension,
+		which does not support Python objects like lists and arrays.
+		Note that you must use the ".item()" method on NumPy objects to convert
+		them to native Python types.
 		"""
-		results = {'Final CCD Energy': self.summary["Final CCD Energy"],}
+
+		i_max_change = np.argmax(self.summary["biggest changes"])
+
+		results = {
+			# from Output
+			'summary': {
+				'Final CCD Energy': self.summary["final CCD energy"],
+				'CCD Correlation Energy': self.summary["final correlation energy"],
+				'Total Iterations': self.summary["total iterations"],
+				'Max CCD Residual': self.summary["max CCD residual"],
+				'Biggest CCD Energy Change': self.summary["biggest changes"][i_max_change].item(),
+				'Iteration of Biggest CCD Energy Change': self.summary["iterations"][i_max_change].item(),
+			},
+			# 'eigenvalues': {
+			# 	'First Iteration': {},
+			# 	'Last Iteration': {},
+			# },
+			# from fort.59
+			'twist': {
+				'Special Twist Angle': {
+					'x': self.twist["special twist angle"][0].item(),
+					'y': self.twist["special twist angle"][1].item(),
+					'z': self.twist["special twist angle"][2].item(),
+				},
+				'Lowest Connectivity Diff Squared': self.twist["lowest connectivity diff squared"],
+				'Averages': {
+					'ntwist x': self.twist["averages"]["ntwist"][0].item(),
+					'ntwist y': self.twist["averages"]["ntwist"][1].item(),
+					'ntwist z': self.twist["averages"]["ntwist"][2].item(),
+					'HF': self.twist["averages"]["HF"],
+					'MP2': self.twist["averages"]["MP2"],
+					'CCD': self.twist["averages"]["CCD"],
+				},
+				'Errors': {
+					'ntwist x': self.twist["errors"]["ntwist"][0].item(),
+					'ntwist y': self.twist["errors"]["ntwist"][1].item(),
+					'ntwist z': self.twist["errors"]["ntwist"][2].item(),
+					'HF': self.twist["errors"]["HF"],
+					'MP2': self.twist["errors"]["MP2"],
+					'CCD': self.twist["errors"]["CCD"],
+				},
+				'Eigenvalue Averages': {
+					'min': np.min(self.twist["eigenvalue averages"]).item(),
+					'max': np.max(self.twist["eigenvalue averages"]).item(),
+				},
+				'Connectivity Averages': {
+					'min': np.min(self.twist["connectivity averages"]).item(),
+					'max': np.max(self.twist["connectivity averages"]).item(),
+				},
+			},
+		}
 
 		return results
-
-if __name__ == "__main__":
-	dir = "N_00014_0002/"
-	ds = Dataset(dir)

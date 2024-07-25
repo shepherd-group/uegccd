@@ -1,0 +1,33 @@
+summary:
+  Biggest CCD Energy Change: 0.0327022045
+  CCD Correlation Energy: -3.079991335924
+  Final CCD Energy: 68.129170913095
+  Iteration of Biggest CCD Energy Change: 1.0
+  Max CCD Residual: 1.522876440417e-08
+  Total Iterations: 35
+twist:
+  Averages:
+    CCD: -3.8417762953211554
+    HF: 71.64506538972017
+    MP2: -3.8417762953211554
+    ntwist x: -0.0003880977630615234
+    ntwist y: -0.040601496696472165
+    ntwist z: -0.05734013080596924
+  Connectivity Averages:
+    max: 20356.72
+    min: 0.0
+  Eigenvalue Averages:
+    max: 3.452644698884896
+    min: -1.1122170409035261
+  Errors:
+    CCD: 0.01728886476441817
+    HF: 0.060372766775140474
+    MP2: 0.01728886476441817
+    ntwist x: 0.0294600323566654
+    ntwist y: 0.029846200355392316
+    ntwist z: 0.03005199938838316
+  Lowest Connectivity Diff Squared: 721.6052824223307
+  Special Twist Angle:
+    x: 0.22011613845825195
+    y: 0.4938933849334717
+    z: -0.13245511054992676

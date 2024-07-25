@@ -1,0 +1,6 @@
+name: uegccd-testing
+
+dependencies:
+  - numpy
+  - pytest
+  - pytest-regressions
