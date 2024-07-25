@@ -12,7 +12,7 @@ This directory contains multiple test cases for uegCCD, each in their own direct
 
 The test suite can be run by executing commands within this `testing/` directory.
 
-1. **WIP** Execute all tests with `./run_tests.sh`
+1. Execute all tests with `./run_tests.sh`
 2. With the `uegccd-testing` environment active, run `pytest`
 
 ## Adding New Tests
@@ -28,7 +28,7 @@ The name of this script should follow the pattern `test_<dirname>.py`.
 To add a new combination of input parameters to the test suite, perform the following steps:
 1. Create a new directory inside `testing/` to contain your new test.
 2. Add your `Input` file & the `test_<dirname.py>` script to this new directory. Code for a simple regression test can be found in a later section.
-3. Make sure the `run_tests.sh` script executes your new Input file. 
+3. Add your new directory to the directory list in the `run_tests.sh` script. Execute the script to confirm it's been added. 
 4. Run `pytest`. You will get an error for your new test directory that says "Failed: File not found in data directory, created:" which you can safely ignore. A new subdirectory has been created containing your reference output. If you run `pytest` again, you should see that all tests pass.
 5. Commit your new test directory (including reference data) to GitHub.
 
