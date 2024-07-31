@@ -31,6 +31,7 @@ DodRPASOSEX:      F
 DoTruncCoulombHF: F
 DoTruncCoulombAll:F 
 DoKS:             F
+DoMeanPotential:  F
 MadelungFactor:   1.0
 DoSingleCalc:     F
 Gap:              0.0

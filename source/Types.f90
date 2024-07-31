@@ -75,6 +75,7 @@ Type UEGInfoType
     Logical :: DoTruncCoulombHF
     Logical :: DoTruncCoulombAll
     Logical :: DoKS
+    Logical :: DoMeanPotential
     Logical :: DoSingleCalc
     Logical :: DoSFCalcMP2
     Logical :: DoSFCalcCCD

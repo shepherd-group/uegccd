@@ -15,7 +15,7 @@
       Use Types, only: UegInfoType
       Implicit None
       Type (UEGInfoType), intent(Out) :: UEGInfo
-      Integer, Parameter    :: NParams = 44
+      Integer, Parameter    :: NParams = 45
       Integer, Parameter    :: LName   = 19
       Integer, Parameter    :: LLine   = 79
       Logical               :: Error, Exists
@@ -107,6 +107,7 @@
                     'DoTruncCoulombHF   ',    &   ! truncates coulomb intergrals in the HF
                     'DoTruncCoulombAll  ',    &   ! truncates all coulomb integrals
                     'DoKS               ',    &   ! only KE is included in eigenvalues
+                    'DoMeanPotential    ',    &   ! use an alternative Coulomb kernel
                     'MadelungFactor     ',    &   ! multiplies the madelung constant by this number
                     'DoSingleCalc       ',    &   ! 
                     'Gap                ',    &   ! opens a gap in the Fock matrix
@@ -259,6 +260,9 @@
              UEGInfo%exchangefactor=1.0_pr
          endif
         
+        Case ('DoMeanPotential')
+         Read(Value,*) UEGInfo%DoMeanPotential
+
         Case ('MadelungFactor')
          Read(Value,*) UEGInfo%madelungfactor
                     
