@@ -1,7 +1,6 @@
 import os.path as path
 import numpy as np
 import math
-import pytest
 
 class Dataset():
 	def __init__(self, dir=""):
@@ -11,8 +10,6 @@ class Dataset():
 		self.dir = path.expanduser(dir)
 		self._load_Output()
 		self._load_fort59()
-		self._load_fort60()
-		self._load_fort61()
 
 	def _load_Output(self):
 
@@ -65,7 +62,6 @@ class Dataset():
 				elif "E(SCF) is" in l: 
 					# start of new eigenvalue block
 					cur_blc += 1
-					postNOcc = False
 					blocks.append({
 						"E(SCF)" : float(l.split()[2]),
 						"eigenvalues": [],
@@ -201,141 +197,10 @@ class Dataset():
 			"connectivity diff squared": np.array(conn_diff),
 			"special twist angle": special,
 			"lowest connectivity diff squared": low_conn_diff,
-		}
+		}					
 
-	def _load_fort60(self):
-		
-		file = path.join(self.dir, "fort.60")
-
-		divider = set('-')
-		basis = {
-			"i": [],
-			"culm": [],
-			"culm*2": [],
-		}
-		init_pass = True
-
-		with open(file) as f:
-			for line in f:
-
-				l = line.strip()
-
-				if not l: 
-					# empty line
-					continue
-				elif set(l) == divider:
-					# only dashes; a divider
-					# use to reset block flags
-					basis_block = False
-				
-				elif "Basis sets available" in l:
-					# header
-					continue
-				elif "Calculating Madelung Constant" in l:
-					# header
-					continue
-
-				# Lines in a basis set block
-				elif "# ecut k-points M" in l:
-					# use as start of basis set block
-					# so that we know block ends on next divider
-					basis_block = True
-
-				# Lines in a Madelung constant block
-				elif "kappa taken from" in l:
-					# use a start of Madelung block
-					mdlg_blc = {
-						"kappa": float(l.split()[-1]),
-						"reciprocal space iterations": [],
-						"real space iterations": []
-					}
-				elif "term2" in l:
-					mdlg_blc["term2"] = float(l.split()[0])
-				elif "term4" in l:
-					# this line also signifies start of iterations
-					# for the reciprocal space term
-					mdlg_blc["term4"] = float(l.split()[0])
-					reciprocal_block = True
-				elif "reciprocal space" in l:
-					# clean up iteration data structure
-					block_data = np.array(mdlg_blc["reciprocal space iterations"])
-					mdlg_blc["reciprocal space iterations"] = block_data
-					
-					# check final reciprocal space value
-					final = float(l.split()[-1])
-					assert math.isclose(final, block_data[-1,-1])
-					mdlg_blc["reciprocal space"] = final # save separately for easier access
-					
-					# switch block type
-					reciprocal_block = False
-					real_block = True
-				elif "real space" in l:
-					# clean up iteration data structure
-					block_data = np.array(mdlg_blc["real space iterations"])
-					mdlg_blc["real space iterations"] = block_data
-
-					# check final real space value
-					final = float(l.split()[-1])
-					assert math.isclose(final, block_data[-1,-1])
-					mdlg_blc["real space"] = final # save separately for easier access
-
-					# end block
-					real_block = False
-				elif "Madelung constant calculated as" in l:
-					# Finish with the initial pass
-					init_pass = False
-					mdlg_blc["Madelung constant"] = l.split()[-1]
-					init = mdlg_blc
-
-				# Lines with data tables
-				else:
-					if basis_block:
-						data = l.split()
-						basis["i"].append(float(data[0]))
-						basis["culm"].append(float(data[1]))
-						basis["culm*2"].append(float(data[2]))
-
-					elif reciprocal_block:
-						data = l.split()
-						data_flt = (float(data[0]), float(data[1]))
-						mdlg_blc["reciprocal space iterations"].append(data_flt)
-
-					elif real_block:
-						data = l.split()
-						data_flt = (float(data[0]), float(data[1]))
-						mdlg_blc["real space iterations"].append(data_flt)
-
-					else:
-						pass # ignore the rest of the file for now
-
-		# Final data structure cleanup
-		# Madelung block data structures are cleaned up while parsing that block
-		basis["i"] = np.array(basis["i"])
-		basis["culm"] = np.array(basis["culm"])
-		basis["culm*2"] = np.array(basis["culm*2"])
-		self.heg = {
-			"basis": basis,
-			"initialization": init,
-		}
-
-	def _load_fort61(self):
-
-		file = path.join(self.dir, "fort.61")
-		with open(file) as f:
-			for line in f:
-
-				data = line.split()
-
-				if "core" in line:
-					core = int(data[0])
-				elif "active" in line:
-					active = int(data[0])
-				else:
-					raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
-
-		self.io = {
-			'core electrons': core,
-			'active electrons': active}
+	def _load_fort80(self):
+		pass
 
 	def test_summary(self):
 		"""
@@ -343,7 +208,7 @@ class Dataset():
 
 		Values stored in this dictionary should reflect the breadth of uegCCD's capabilities.
 		This dictionary is used with pytest's pytest-regression's extension,
-		which does not support Python objects like lists and arrays.
+		which does not support Python objects like lists and arrays or NumPy types.
 		Note that you must use the ".item()" method on NumPy objects to convert
 		them to native Python types.
 		"""
@@ -360,10 +225,19 @@ class Dataset():
 				'Biggest CCD Energy Change': self.summary["biggest changes"][i_max_change].item(),
 				'Iteration of Biggest CCD Energy Change': self.summary["iterations"][i_max_change].item(),
 			},
-			# 'eigenvalues': {
-			# 	'First Iteration': {},
-			# 	'Last Iteration': {},
-			# },
+			'eigenvalues': {
+				'Initial Iteration': {
+					'Number of Eigenvalues': len(self.eigenvalues[0]['eigenvalues']),
+					'SCF Energy': self.eigenvalues[0]['E(SCF)'],
+					'MP2 Energy': self.eigenvalues[0]['E(2)']
+				},
+				'Final Iteration': {
+					'Number of Eigenvalues': len(self.eigenvalues[-1]['eigenvalues']),
+					'SCF Energy': self.eigenvalues[-1]['E(SCF)'],
+					'MP2 Energy': self.eigenvalues[-1]['E(2)']
+				}
+			},
+
 			# from fort.59
 			'twist': {
 				'Special Twist Angle': {

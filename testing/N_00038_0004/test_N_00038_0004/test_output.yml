@@ -1,3 +1,12 @@
+eigenvalues:
+  Final Iteration:
+    MP2 Energy: -0.730097753909
+    Number of Eigenvalues: 54
+    SCF Energy: 23.625902880155
+  Initial Iteration:
+    MP2 Energy: -0.706450224145
+    Number of Eigenvalues: 54
+    SCF Energy: 22.544763095324
 summary:
   Biggest CCD Energy Change: 0.0252280164
   CCD Correlation Energy: -0.734952736012
