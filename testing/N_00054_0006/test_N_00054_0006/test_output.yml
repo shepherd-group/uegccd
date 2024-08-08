@@ -3,7 +3,7 @@ summary:
   CCD Correlation Energy: -1.196398095834
   Final CCD Energy: 32.598981756134
   Iteration of Biggest CCD Energy Change: 1.0
-  Max CCD Residual: 2.52937492798e-08
+  Max CCD Residual: 2.529374927562e-08
   Total Iterations: 38
 twist:
   Averages:
@@ -20,9 +20,9 @@ twist:
     max: 3.416005792991683
     min: -1.0541384057232703
   Errors:
-    CCD: 0.007027919026105708
-    HF: 0.06506907930660928
-    MP2: 0.007027919026105708
+    CCD: 0.007027919026105636
+    HF: 0.06506907930662903
+    MP2: 0.007027919026105636
     ntwist x: 0.0294600323566654
     ntwist y: 0.029846200355392316
     ntwist z: 0.03005199938838316
