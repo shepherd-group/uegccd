@@ -7,6 +7,17 @@ eigenvalues:
     MP2 Energy: -0.1317174123
     Number of Eigenvalues: 20
     SCF Energy: 9.07638714305
+structure factor:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.872983346207417
+      min: 1.4142135623730951
+    Sum_G( S(G)*V(G) ): -0.28950840744962714
+  Intial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.872983346207417
+      min: 1.4142135623730951
+    Sum_G( S(G)*V(G) ): -0.22730872953589673
 summary:
   Biggest CCD Energy Change: 0.0216580871
   CCD Correlation Energy: -0.144754203725

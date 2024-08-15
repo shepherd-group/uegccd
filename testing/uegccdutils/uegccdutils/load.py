@@ -3,15 +3,20 @@ import numpy as np
 import math
 
 class Dataset():
-	def __init__(self, dir=""):
+	def __init__(self, dir="."):
 		"""
-		Load the output files associated 
+		Load the output files stored inside a given uegCCD simulation directory.
+		By default, load the current directory.
 		"""
 		self.dir = path.expanduser(dir)
 		self._load_Output()
 		self._load_fort59()
+		self._load_fort80()
 
 	def _load_Output(self):
+		"""
+		Load the primary output file.
+		"""
 
 		file = path.join(self.dir, "Output")
 
@@ -107,6 +112,9 @@ class Dataset():
 		self.summary = summary
 
 	def _load_fort59(self):
+		"""
+		Load the output file containing twist angle data.
+		"""
 
 		file = path.join(self.dir, "fort.59")
 
@@ -200,11 +208,56 @@ class Dataset():
 		}					
 
 	def _load_fort80(self):
-		pass
+		"""
+		Load the output file containing transition structure factor data
+		"""
+		
+		file = path.join(self.dir, "fort.80")
+
+		sfactors = []
+		curr_fctr = -1
+
+		with open(file) as f:
+			for line in f:
+				
+				data = line.split()
+
+				if line.strip() == "--------":
+					continue
+				if "Starting a new structure factor" in line:
+					curr_fctr += 1
+					sfactors.append({
+						"integerized momentum transfer vector": [],
+						"momentum transfer vector magnitude": [],
+						"S(G)": [],
+						"Coulomb potential": [],
+						"non-exchange S(G)": [],
+						"exchange S(G)": []
+					})
+				else:
+					if len(data) == 8:
+						sfactors[curr_fctr]["integerized momentum transfer vector"].append(
+							(int(i) for i in data[:3])
+						)
+						sfactors[curr_fctr]["momentum transfer vector magnitude"].append(float(data[3]))
+						sfactors[curr_fctr]["S(G)"].append(float(data[4]))
+						sfactors[curr_fctr]["Coulomb potential"].append(float(data[5]))
+						sfactors[curr_fctr]["non-exchange S(G)"].append(float(data[6]))
+						sfactors[curr_fctr]["exchange S(G)"].append(float(data[7]))
+					else:
+						raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
+
+		# Convert data lists to NumPy arrays		
+		for fctr in sfactors:
+			for quant, val in fctr.items():
+				fctr[quant] = np.array(val)
+
+		self.structure_factors = sfactors		
+
 
 	def test_summary(self):
 		"""
-		Return a dictionary with summarizing information for testing purposes.
+		Return a dictionary with summarizing information for regression testing purposes.
 
 		Values stored in this dictionary should reflect the breadth of uegCCD's capabilities.
 		This dictionary is used with pytest's pytest-regression's extension,
@@ -271,6 +324,30 @@ class Dataset():
 					'max': np.max(self.twist["connectivity averages"]).item(),
 				},
 			},
+
+			# from fort.80
+			'structure factor': {
+				'Intial Structure Factor': {
+					'Sum_G( S(G)*V(G) )': np.dot(
+						self.structure_factors[0]["S(G)"],
+						self.structure_factors[0]["Coulomb potential"]
+						).item(),
+					'Momentum Transfer Vector Magnitude': {
+						'min': np.min(self.structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.structure_factors[0]["momentum transfer vector magnitude"]).item(),
+					}
+				},
+				'Final Structure Factor': {
+					'Sum_G( S(G)*V(G) )': np.dot(
+						self.structure_factors[-1]["S(G)"],
+						self.structure_factors[-1]["Coulomb potential"]
+						).item(),
+					'Momentum Transfer Vector Magnitude': {
+						'min': np.min(self.structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+					}	
+				}
+			}
 		}
 
 		return results
