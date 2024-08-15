@@ -11,7 +11,7 @@ def test_output(data_regression):
 
 def test_fort80_consistency():
 	data = Dataset(dir)
-	for fctr in data.structure_factors:
+	for fctr in data.CCD_structure_factors:
 		sum = fctr["exchange S(G)"] \
 			+ fctr["non-exchange S(G)"]
 		assert np.allclose(sum, fctr["S(G)"])

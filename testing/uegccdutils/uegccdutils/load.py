@@ -12,6 +12,8 @@ class Dataset():
 		self._load_Output()
 		self._load_fort59()
 		self._load_fort80()
+		self._load_fort81()
+		self._load_fort82()
 
 	def _load_Output(self):
 		"""
@@ -209,7 +211,7 @@ class Dataset():
 
 	def _load_fort80(self):
 		"""
-		Load the output file containing transition structure factor data
+		Load the output file containing transition structure factor data for the CC calculation.
 		"""
 		
 		file = path.join(self.dir, "fort.80")
@@ -237,7 +239,7 @@ class Dataset():
 				else:
 					if len(data) == 8:
 						sfactors[curr_fctr]["integerized momentum transfer vector"].append(
-							(int(i) for i in data[:3])
+							[int(i) for i in data[:3]]
 						)
 						sfactors[curr_fctr]["momentum transfer vector magnitude"].append(float(data[3]))
 						sfactors[curr_fctr]["S(G)"].append(float(data[4]))
@@ -252,8 +254,93 @@ class Dataset():
 			for quant, val in fctr.items():
 				fctr[quant] = np.array(val)
 
-		self.structure_factors = sfactors		
+		self.CCD_structure_factors = sfactors		
 
+	def _load_fort81(self):
+		"""
+		Load the output file containing transition structure factor data for the MP2 calculation.
+		"""
+		
+		file = path.join(self.dir, "fort.81")
+
+		sfactors = []
+		curr_fctr = -1
+
+		with open(file) as f:
+			for line in f:
+				
+				data = line.split()
+
+				if line.strip() == "--------":
+					continue
+				if "Starting a new structure factor" in line:
+					curr_fctr += 1
+					sfactors.append({
+						"integerized momentum transfer vector": [],
+						"momentum transfer vector magnitude": [],
+						"S(G)": [],
+						"Coulomb potential": [],
+					})
+				else:
+					if len(data) == 6:
+						sfactors[curr_fctr]["integerized momentum transfer vector"].append(
+							[int(i) for i in data[:3]]
+						)
+						sfactors[curr_fctr]["momentum transfer vector magnitude"].append(float(data[3]))
+						sfactors[curr_fctr]["S(G)"].append(float(data[4]))
+						sfactors[curr_fctr]["Coulomb potential"].append(float(data[5]))
+					else:
+						raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
+
+		# Convert data lists to NumPy arrays		
+		for fctr in sfactors:
+			for quant, val in fctr.items():
+				fctr[quant] = np.array(val)
+
+		self.MP2_structure_factors = sfactors		
+
+	def _load_fort82(self):
+		"""
+		Load the output file containing transition structure factor data for the HF calculation.
+
+		The names for quantities in the resulting HF_structure_factors object are extrememly questionable - CK
+		"""
+		
+		file = path.join(self.dir, "fort.82")
+
+		sfactors = []
+		curr_fctr = -1
+
+		with open(file) as f:
+			for line in f:
+				
+				data = line.split()
+
+				if line.strip() == "--------":
+					continue
+				if "Starting a new structure factor" in line:
+					curr_fctr += 1
+					sfactors.append({
+						"integerized momentum transfer vector": [],
+						"structure factor exchange energy": [],
+						"Coulomb potential exchange energy": [],
+					})
+				else:
+					if len(data) == 5:
+						sfactors[curr_fctr]["integerized momentum transfer vector"].append(
+							[int(i) for i in data[:3]]
+						)
+						sfactors[curr_fctr]["structure factor exchange energy"].append(float(data[3]))
+						sfactors[curr_fctr]["Coulomb potential exchange energy"].append(float(data[4]))
+					else:
+						raise RuntimeError(f"File {file} contains unrecognized line:\n{line}")
+
+		# Convert data lists to NumPy arrays		
+		for fctr in sfactors:
+			for quant, val in fctr.items():
+				fctr[quant] = np.array(val)
+
+		self.HF_structure_factors = sfactors	
 
 	def test_summary(self):
 		"""
@@ -270,7 +357,7 @@ class Dataset():
 
 		results = {
 			# from Output
-			'summary': {
+			'Summary': {
 				'Final CCD Energy': self.summary["final CCD energy"],
 				'CCD Correlation Energy': self.summary["final correlation energy"],
 				'Total Iterations': self.summary["total iterations"],
@@ -278,7 +365,7 @@ class Dataset():
 				'Biggest CCD Energy Change': self.summary["biggest changes"][i_max_change].item(),
 				'Iteration of Biggest CCD Energy Change': self.summary["iterations"][i_max_change].item(),
 			},
-			'eigenvalues': {
+			'Eigenvalues': {
 				'Initial Iteration': {
 					'Number of Eigenvalues': len(self.eigenvalues[0]['eigenvalues']),
 					'SCF Energy': self.eigenvalues[0]['E(SCF)'],
@@ -292,7 +379,7 @@ class Dataset():
 			},
 
 			# from fort.59
-			'twist': {
+			'Twist Angles': {
 				'Special Twist Angle': {
 					'x': self.twist["special twist angle"][0].item(),
 					'y': self.twist["special twist angle"][1].item(),
@@ -326,26 +413,66 @@ class Dataset():
 			},
 
 			# from fort.80
-			'structure factor': {
+			'CCD Structure Factors': {
 				'Intial Structure Factor': {
 					'Sum_G( S(G)*V(G) )': np.dot(
-						self.structure_factors[0]["S(G)"],
-						self.structure_factors[0]["Coulomb potential"]
+						self.CCD_structure_factors[0]["S(G)"],
+						self.CCD_structure_factors[0]["Coulomb potential"]
 						).item(),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.structure_factors[0]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'min': np.min(self.CCD_structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.CCD_structure_factors[0]["momentum transfer vector magnitude"]).item(),
 					}
 				},
 				'Final Structure Factor': {
 					'Sum_G( S(G)*V(G) )': np.dot(
-						self.structure_factors[-1]["S(G)"],
-						self.structure_factors[-1]["Coulomb potential"]
+						self.CCD_structure_factors[-1]["S(G)"],
+						self.CCD_structure_factors[-1]["Coulomb potential"]
 						).item(),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.structure_factors[-1]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'min': np.min(self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
 					}	
+				}
+			},
+
+			# from fort.81
+			'MP2 Structure Factors': {
+				'Intial Structure Factor': {
+					'Sum_G( S(G)*V(G) )': np.dot(
+						self.MP2_structure_factors[0]["S(G)"],
+						self.MP2_structure_factors[0]["Coulomb potential"]
+						).item(),
+					'Momentum Transfer Vector Magnitude': {
+						'min': np.min(self.MP2_structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.MP2_structure_factors[0]["momentum transfer vector magnitude"]).item(),
+					}
+				},
+				'Final Structure Factor': {
+					'Sum_G( S(G)*V(G) )': np.dot(
+						self.MP2_structure_factors[-1]["S(G)"],
+						self.MP2_structure_factors[-1]["Coulomb potential"]
+						).item(),
+					'Momentum Transfer Vector Magnitude': {
+						'min': np.min(self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'max': np.max(self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+					}	
+				}
+			},
+
+			# from fort.82
+			'HF Structure Factors': {
+				'Initial Structure Factor': {
+					'Sum( ExSf*ExV )': np.dot(
+						self.HF_structure_factors[0]["structure factor exchange energy"],
+						self.HF_structure_factors[0]["Coulomb potential exchange energy"]
+					).item()
+				},
+				'Final Structure Factor': {
+					'Sum( ExSf*ExV )': np.dot(
+						self.HF_structure_factors[-1]["structure factor exchange energy"],
+						self.HF_structure_factors[-1]["Coulomb potential exchange energy"]
+					).item()
 				}
 			}
 		}

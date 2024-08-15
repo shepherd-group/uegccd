@@ -1,13 +1,4 @@
-eigenvalues:
-  Final Iteration:
-    MP2 Energy: -1.75695338473
-    Number of Eigenvalues: 93
-    SCF Energy: 41.366067750576
-  Initial Iteration:
-    MP2 Energy: -1.729882517527
-    Number of Eigenvalues: 93
-    SCF Energy: 41.180791231938
-structure factor:
+CCD Structure Factors:
   Final Structure Factor:
     Momentum Transfer Vector Magnitude:
       max: 4.358898943540674
@@ -18,14 +9,39 @@ structure factor:
       max: 4.358898943540674
       min: 1.0
     Sum_G( S(G)*V(G) ): -1.3134340333884837
-summary:
+Eigenvalues:
+  Final Iteration:
+    MP2 Energy: -1.75695338473
+    Number of Eigenvalues: 93
+    SCF Energy: 41.366067750576
+  Initial Iteration:
+    MP2 Energy: -1.729882517527
+    Number of Eigenvalues: 93
+    SCF Energy: 41.180791231938
+HF Structure Factors:
+  Final Structure Factor:
+    Sum( ExSf*ExV ): 17.474451518467202
+  Initial Structure Factor:
+    Sum( ExSf*ExV ): 17.536207445815617
+MP2 Structure Factors:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.358898943540674
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.3134340333884837
+  Intial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.123105625617661
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.352607494339307
+Summary:
   Biggest CCD Energy Change: 0.0269562024
   CCD Correlation Energy: -1.574090159055
   Final CCD Energy: 39.791977591521
   Iteration of Biggest CCD Energy Change: 1.0
   Max CCD Residual: 2.280701320943e-08
   Total Iterations: 35
-twist:
+Twist Angles:
   Averages:
     CCD: -1.773040971721713
     HF: 41.25082739817241
