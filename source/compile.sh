@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ "$(uname)" == "Darwin" ]; then
+if [[ "$OSTYPE" == "darwin"* ]]; then
     export F95='gfortran -framework accelerate'
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     export F95='gfortran'
 fi
 
@@ -55,10 +55,10 @@ echo "compiled Wrappers.f90"
 $F95 -O3 -c         Main.f90
 echo "compiled Main.f90"
 
-if [ "$(uname)" == "Darwin" ]; then 
+if [[ "$OSTYPE" == "darwin"* ]]; then 
     $F95 -O3 *.o -o ZCode
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    $F95 -O3 *.o -o ZCode  -L . -l flexiblas
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    $F95 -O3 *.o -o ZCode -l openblas
 fi
 
 #mkdir -p ZRun
