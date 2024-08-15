@@ -1,9 +1,23 @@
 #!/bin/bash
 
+# Allow for -d flag to compile for debugging.
+# Further flags can be added to the case statement if desired.
+debug=false
+while getopts d flag; do
+    case "${flag}" in
+        d) debug=true;;
+    esac
+done
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
     export F95='gfortran -framework accelerate'
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     export F95='gfortran'
+fi
+
+if $debug; then
+    F95+=' -g'
+    echo "NOTE: compiling with debug symbols!"
 fi
 
 # Compile the fundamentals
