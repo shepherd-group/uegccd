@@ -414,7 +414,7 @@ class Dataset():
 
 			# from fort.80
 			'CCD Structure Factors': {
-				'Intial Structure Factor': {
+				'Initial Structure Factor': {
 					'Sum_G( S(G)*V(G) )': np.dot(
 						self.CCD_structure_factors[0]["S(G)"],
 						self.CCD_structure_factors[0]["Coulomb potential"]
@@ -438,7 +438,7 @@ class Dataset():
 
 			# from fort.81
 			'MP2 Structure Factors': {
-				'Intial Structure Factor': {
+				'Initial Structure Factor': {
 					'Sum_G( S(G)*V(G) )': np.dot(
 						self.MP2_structure_factors[0]["S(G)"],
 						self.MP2_structure_factors[0]["Coulomb potential"]

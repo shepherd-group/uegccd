@@ -4,7 +4,7 @@ CCD Structure Factors:
       max: 3.872983346207417
       min: 1.4142135623730951
     Sum_G( S(G)*V(G) ): -0.28950840744962714
-  Intial Structure Factor:
+  Initial Structure Factor:
     Momentum Transfer Vector Magnitude:
       max: 3.872983346207417
       min: 1.4142135623730951
@@ -29,7 +29,7 @@ MP2 Structure Factors:
       max: 3.872983346207417
       min: 1.4142135623730951
     Sum_G( S(G)*V(G) ): -0.22730872953589673
-  Intial Structure Factor:
+  Initial Structure Factor:
     Momentum Transfer Vector Magnitude:
       max: 3.872983346207417
       min: 1.4142135623730951
