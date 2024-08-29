@@ -7,7 +7,7 @@ profile=false
 while getopts "dp" flag; do
     case "${flag}" in
         d) debug=true;;
-	p) profile=true;;
+        p) profile=true;;
     esac
 done
 
