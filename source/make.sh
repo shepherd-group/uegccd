@@ -4,10 +4,12 @@
 # Further flags can be added to the case statement if desired.
 debug=false
 profile=false
-while getopts "dp" flag; do
+threaded=false
+while getopts "dpt" flag; do
     case "${flag}" in
         d) debug=true;;
         p) profile=true;;
+        t) threaded=true;;
     esac
 done
 
@@ -25,6 +27,10 @@ fi
 if $profile; then
     F95+=" -pg"
     echo "NOTE: compiling for profiling!"
+fi
+if $threaded; then
+    F95+=" -fopenmp"
+    echo "NOTE: compiling with OpenMP"
 fi
 
 # Compile the fundamentals

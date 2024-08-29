@@ -144,7 +144,7 @@ Contains
       Contains
 
         Subroutine TermsWrapper(HEGData,UEGInfo,CCScrData,T2aaaa,T2abab,T2abba,R2abab,R2abba,NDIIS)
-
+          ! CK: consider starting parallel block here instead of each indv subroutine
           ! Term function calls, now with half the code.
           ! A wise being once said: "it's the little things in life" :)
 
@@ -483,6 +483,8 @@ Contains
 
       G2abab = Zero
       G2abba = Zero
+!$omp parallel
+!$omp do collapse(3) private(B, V_ijab, V_ijba)
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
       Do A = UEGInfo%NOcc+1,UEGInfo%NAO
@@ -499,7 +501,8 @@ Contains
       End Do
       End Do
       End Do
-
+!$omp end do
+!$omp end parallel
       Return
       End Subroutine GetG2Drivers
 
@@ -516,9 +519,9 @@ Contains
                                        G2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
       Real (Kind=pr), Intent(InOut) :: Joo(UEGInfo%NOcc),                                            &
                                        Jvv(UEGInfo%NOcc+1:UEGInfo%NAO)
-      Real (Kind=pr), Intent(InOut) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
+      Real (Kind=pr), Intent(In) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
 
 ! Local variables
       Integer :: I, J, A, B, K, L, C, D
@@ -547,6 +550,8 @@ Contains
 
       Joo = Zero
       Jvv = Zero
+      ! CK: swapping the order of L & K iterations causes tiny (ignorable) changes
+      ! If I can get this loop to parallelize, its worth updating the test suite.
       Do K = 1,UEGInfo%NOcc
       Do L = 1,UEGInfo%NOcc
       Do C = UEGInfo%NOcc+1,UEGInfo%NAO
@@ -568,6 +573,8 @@ Contains
 
       
 ! The intermediates are done, so contract with T2
+!$omp parallel
+!$omp do collapse(3) private(B)
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
       Do A = UEGInfo%NOcc+1,UEGInfo%NAO
@@ -580,6 +587,8 @@ Contains
       End Do
       End Do
       End Do
+!$omp end do
+!$omp end parallel
 
       Return
       End Subroutine GetG2Mosaics
@@ -595,9 +604,9 @@ Contains
 
       Real (Kind=pr), Intent(InOut) :: G2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
                                        G2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
-      Real (Kind=pr), Intent(InOut) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
+      Real (Kind=pr), Intent(In) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
 
 ! Local variables
       Integer :: I, J, A, B, K, L, C, D, MaxDummyFlag
@@ -608,12 +617,13 @@ Contains
 !  As vectors, we have A + B = I + J = K + L = C + D.             !
 !=================================================================!
 
-      Do I = 1,UEGInfo%NOcc
-      Do J = 1,UEGInfo%NOcc
-
 ! Build the intermediates for each IJKL => hole-hole ladder, ladder T.V.T
 ! We'll have J2_ijkl which goes with T2abab(K,L,A,B) in G2abab(I,J,A,B) and with T2abba(K,L,A,B) in G2abba(I,J,A,B)
 ! We'll have J3_ijkl which goes with T2abba(K,L,A,B) in G2abab(I,J,A,B) and with T2abab(K,L,A,B) in G2abba(I,J,A,B)
+!$omp parallel
+!$omp do collapse(3) private(C, A, L, D, B, J2_ijkl, J3_ijkl, V_cdkl, V_cdlk, MaxDummyFlag)
+      Do I = 1,UEGInfo%NOcc
+      Do J = 1,UEGInfo%NOcc
         Do K = 1,UEGInfo%NOcc
           L = FindIndex(HEGData,UEGInfo%MaxKPoint,UEGInfo%NAO,I,J,K)
           If(L > UEGInfo%NOcc .or. L <= 0) Cycle
@@ -629,6 +639,7 @@ Contains
             Print *, "Disallowed excitation not trapped!"
             Cycle
           End If
+        ! CK: Time making this a reduction over J2 & J3. May need to ration threads.
           Do C = UEGInfo%NOcc+1,UEGInfo%NAO
             D = FindIndex(HEGData,UEGInfo%MaxKPoint,UEGInfo%NAO,I,J,C)
             If(D <= UEGInfo%NOcc) Cycle
@@ -655,8 +666,14 @@ Contains
             G2abba(I,J,A) = G2abba(I,J,A) + F12*(J2_ijkl*T2abba(K,L,A) + J3_ijkl*T2abab(K,L,A))
           End Do
         End Do
+      End Do
+      End Do
+!$omp end do
 
+!$omp do collapse(3) private(A, C, B, D, V_cdab, V_cdba, MaxDummyFlag)
 ! Add the particle-particle ladder
+      Do I = 1,UEGInfo%NOcc
+      Do J = 1,UEGInfo%NOcc
         Do A = UEGInfo%NOcc+1,UEGInfo%NAO
           B = FindIndex(HEGData,UEGInfo%MaxKPoint,UEGInfo%NAO,I,J,A)
           If(B <= UEGInfo%NOcc) Cycle
@@ -681,6 +698,8 @@ Contains
         End Do
       End Do
       End Do
+!$omp end do
+!$omp end parallel
 
       Return
       End Subroutine GetG2Ladders
@@ -696,9 +715,9 @@ Contains
 
       Real (Kind=pr), Intent(InOut) :: G2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
                                        G2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
-      Real (Kind=pr), Intent(InOut) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
+      Real (Kind=pr), Intent(In) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
 
 ! Local variables
       Integer :: I, J, A, B, K, L, C, D, MaxDummyFlag
@@ -712,6 +731,8 @@ Contains
 !            + t_{ik}^{ac} t_{lj}^{db} vbar^{kl}_{cd}       !
 !===========================================================!
 
+!$omp parallel
+!$omp do collapse(3) private(K, B, C, V_cjkb, V_cjbk, V_cika, V_ciak, MaxDummyFlag)
 ! These are the linear terms
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
@@ -761,13 +782,14 @@ Contains
       End Do
       End Do
       End Do
-
+!$omp end do
 
 ! These are the quadratic terms.  They require intermediates.
 ! We'll have J1_idal, which contracts with T2aaaa(L,J,D,B) in G2aaaa(I,J,A,B) and with T2abab(L,J,D,B) in G2abab(I,J,A,B)
 ! We'll have J2_idal, which contracts with T2abab(L,J,D,B) in G2aaaa(I,J,A,B) and with T2aaaa(L,J,D,B) in G2abab(I,J,A,B
 ! We'll have J3_idal, which contracts with T2abba(L,J,D,B) in G2abba(I,J,A,B)
 ! This one is a true pain in the ass.
+!$omp do collapse(3) private(K, J, C, D, B, J1_idal, J2_idal, J3_idal, V_cdkl, V_cdlk, MaxDummyFlag)
       Do I = 1,UEGInfo%NOcc
       Do A = UEGInfo%NOcc+1,UEGInfo%NAO
         Do L = 1,UEGInfo%NOcc
@@ -809,7 +831,8 @@ Contains
         End Do
       End Do
       End Do
-
+!$omp end do
+!$omp end parallel
       Return
       End Subroutine GetG2Rings
 
@@ -824,9 +847,9 @@ Contains
 
       Real (Kind=pr), Intent(InOut) :: G2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
                                        G2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
-      Real (Kind=pr), Intent(InOut) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
-                                       T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
+      Real (Kind=pr), Intent(In) :: T2aaaa(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abab(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO), &
+                                    T2abba(UEGInfo%NOcc,UEGInfo%NOcc,UEGInfo%NOcc+1:UEGInfo%NAO)
 
 ! Local variables
       Integer :: I, J, A, B, K, L, C, D, MaxDummyFlag
@@ -841,6 +864,8 @@ Contains
 !  Most of the signs drop out on using vbar!                !
 !===========================================================!
 
+!$omp parallel
+!$omp do collapse(3) private(K, B, C, V_jcka, V_jcak, V_ickb, V_icbk, MaxDummyFlag)
 ! These are the linear terms
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
@@ -890,12 +915,13 @@ Contains
       End Do
       End Do
       End Do
-
+!$omp end do
 
 ! These are the quadratic terms.  They require intermediates.
 ! We'll have J1_idlb, which contracts with T2aaaa(L,J,A,D) in G2aaaa(I,J,A,B) and with T2abba(L,J,A,D) in G2abba(I,J,A,B)
 ! We'll have J2_idlb, which contracts with T2abba(L,J,A,D) in G2aaaa(I,J,A,B) and with T2aaaa(L,J,A,D) in G2abba(I,J,A,B
 ! We'll have J3_idlb, which contracts with T2abab(L,J,A,D) in G2abab(I,J,A,B)
+!$omp do collapse(3) private(K, J, C, D, A, J1_idlb, J2_idlb, J3_idlb, V_cdkl, V_cdlk, MaxDummyFlag)
       Do I = 1,UEGInfo%NOcc
       Do B = UEGInfo%NOcc+1,UEGInfo%NAO
         Do L = 1,UEGInfo%NOcc
@@ -935,7 +961,8 @@ Contains
         End Do
       End Do
       End Do
-
+!$omp end do
+!$omp end parallel
       Return
       End Subroutine GetG2XRings
 
