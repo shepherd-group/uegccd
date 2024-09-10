@@ -9,6 +9,11 @@ CCD Structure Factors:
       max: 3.872983346207417
       min: 1.4142135623730951
     Sum_G( S(G)*V(G) ): -0.22730872953589673
+Connectivity:
+  Matrix Dim 0: 100
+  Matrix Dim 1: 6
+  Maximum: 192
+  Number of Unique Entries: 33
 Eigenvalues:
   Final Iteration:
     MP2 Energy: -0.113654364768

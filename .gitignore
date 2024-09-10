@@ -1,4 +1,5 @@
-uegccd*
+bin/*
+benchmarks/uegccd
 
 Output
 fort.*

@@ -10,6 +10,7 @@ class Dataset():
 		"""
 		self.dir = path.expanduser(dir)
 		self._load_Output()
+		self._load_fort58()
 		self._load_fort59()
 		self._load_fort80()
 		self._load_fort81()
@@ -112,6 +113,17 @@ class Dataset():
 
 		self.eigenvalues = blocks
 		self.summary = summary
+
+	def _load_fort58(self):
+		"""
+		Load the output file containing connectivity data.
+		"""
+
+		file = path.join(self.dir, "fort.58")
+
+		conn = np.genfromtxt(file, dtype=int)
+
+		self.connectivity = conn
 
 	def _load_fort59(self):
 		"""
@@ -376,6 +388,14 @@ class Dataset():
 					'SCF Energy': self.eigenvalues[-1]['E(SCF)'],
 					'MP2 Energy': self.eigenvalues[-1]['E(2)']
 				}
+			},
+
+			# from fort.58
+			'Connectivity':{
+				"Matrix Dim 0": self.connectivity.shape[0],
+				"Matrix Dim 1": self.connectivity.shape[1],
+				"Maximum": self.connectivity.max().item(),
+				"Number of Unique Entries": np.unique(self.connectivity).size
 			},
 
 			# from fort.59
