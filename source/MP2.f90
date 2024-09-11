@@ -32,6 +32,7 @@
       integer :: SfLength
       Integer :: this_qvec(3)
       Real (pr) :: this_q2
+      Real (pr) :: TempECorr
 
 !==========================================!
 !  This does the MP2 calculation.  Glory!  !
@@ -51,8 +52,11 @@
       T2abab = Zero
       T2abba = Zero
       T2aaaa = Zero
-      HEGData%ECorr = Zero
+      TempECorr = Zero
       Connectivity = Zero ! connectivity calculation
+!$omp parallel
+!$omp do collapse(3) reduction(+:TempECorr, Connectivity, SfSum) &
+!$omp&   private(B, V_ijab, V_ijba, dK2_ijab, dK2_ijba, Denom, InCore, this_qvec, this_q2)
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
       Do A = UEGInfo%NOcc+1,UEGInfo%NAO
@@ -68,10 +72,10 @@
         T2abab(I,J,A) = V_ijab/Denom
         T2abba(I,J,A) = -V_ijba/Denom
         T2aaaa(I,J,A) = T2abab(I,J,A) + T2abba(I,J,A)
-        HEGData%ECorr = HEGData%ECorr &
-                      + F12*T2aaaa(I,J,A)*(V_ijab - V_ijba) &
-                      + F12*T2abab(I,J,A)*(V_ijab) &
-                      - F12*T2abba(I,J,A)*(V_ijba)
+        TempECorr = TempECorr &
+                  + F12*T2aaaa(I,J,A)*(V_ijab - V_ijba) &
+                  + F12*T2abab(I,J,A)*(V_ijab) &
+                  - F12*T2abba(I,J,A)*(V_ijba)
         dK2_ijab = dK2(HEGData,UEGInfo%CoreN,I,J,A,B,InCore) ! TODO need this function
         dK2_ijba = dK2(HEGData,UEGInfo%CoreN,I,J,B,A,InCore) 
         If ((dK2_ijab > ConnectivityLimit) .or. (dK2_ijba > ConnectivityLimit)) Then
@@ -80,22 +84,29 @@
           Stop "Program stopped in MP2.f90"
         End If
         If (.not. InCore) then
-            Connectivity(dK2_ijba)=Connectivity(dK2_ijba)+1
-            Connectivity(dK2_ijab)=Connectivity(dK2_ijab)+1
+          Connectivity(dK2_ijba)=Connectivity(dK2_ijba)+1
+          Connectivity(dK2_ijab)=Connectivity(dK2_ijab)+1
         End If
-        this_qvec=dK(HEGData,UEGInfo%CoreN,a,b,i,j,inCore)
-        SfSum(this_qvec(1),this_qvec(2),this_qvec(3))=SfSum(this_qvec(1),this_qvec(2),this_qvec(3))+(T2aaaa(I,J,A)+ T2abab(I,J,A))
-        this_q2=dK2scaled(HEGData,UEGInfo%CoreN,a,b,i,j,inCore)
-        SfG(this_qvec(1),this_qvec(2),this_qvec(3))=this_q2**0.5_pr
-        SfV(this_qvec(1),this_qvec(2),this_qvec(3))=V_ijab
-        this_qvec=dK(HEGData,UEGInfo%CoreN,a,b,j,i,inCore)
-        SfSum(this_qvec(1),this_qvec(2),this_qvec(3))=SfSum(this_qvec(1),this_qvec(2),this_qvec(3))-(T2aaaa(I,J,A) + T2abba(I,J,A))
-        this_q2=dK2scaled(HEGData,UEGInfo%CoreN,a,b,j,i,inCore)
-        SfG(this_qvec(1),this_qvec(2),this_qvec(3))=this_q2**0.5_pr
-        SfV(this_qvec(1),this_qvec(2),this_qvec(3))=V_ijba
+        this_qvec = dK(HEGData,UEGInfo%CoreN,a,b,i,j,inCore)
+        SfSum(this_qvec(1),this_qvec(2),this_qvec(3)) = SfSum(this_qvec(1),this_qvec(2),this_qvec(3)) &
+                                                        +(T2aaaa(I,J,A)+ T2abab(I,J,A))
+
+        this_q2 = dK2scaled(HEGData,UEGInfo%CoreN,a,b,i,j,inCore)
+        SfG(this_qvec(1),this_qvec(2),this_qvec(3)) = this_q2**0.5_pr
+        SfV(this_qvec(1),this_qvec(2),this_qvec(3)) = V_ijab
+        
+        this_qvec = dK(HEGData,UEGInfo%CoreN,a,b,j,i,inCore)
+        SfSum(this_qvec(1),this_qvec(2),this_qvec(3)) = SfSum(this_qvec(1),this_qvec(2),this_qvec(3)) &
+                                                        -(T2aaaa(I,J,A) + T2abba(I,J,A))
+        
+        this_q2 = dK2scaled(HEGData,UEGInfo%CoreN,a,b,j,i,inCore)
+        SfG(this_qvec(1),this_qvec(2),this_qvec(3)) = this_q2**0.5_pr
+        SfV(this_qvec(1),this_qvec(2),this_qvec(3)) = V_ijba
       End Do
       End Do
       End Do
+!$omp end parallel
+      HEGData%ECorr = TempECorr
       
       If (Present(Conn)) Then
           Allocate(Conn(ConnectivityLimit))

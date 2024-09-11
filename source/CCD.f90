@@ -550,8 +550,8 @@ Contains
 
       Joo = Zero
       Jvv = Zero
-      ! CK: swapping the order of L & K iterations causes tiny (ignorable) changes
-      ! If I can get this loop to parallelize, its worth updating the test suite.
+!$omp parallel 
+!$omp do collapse(3) reduction(+:Jvv, Joo) private(D, V_cdkl, V_cdlk)
       Do K = 1,UEGInfo%NOcc
       Do L = 1,UEGInfo%NOcc
       Do C = UEGInfo%NOcc+1,UEGInfo%NAO
@@ -570,10 +570,9 @@ Contains
       End Do
       End Do
       End Do
-
+!$omp end do
       
 ! The intermediates are done, so contract with T2
-!$omp parallel
 !$omp do collapse(3) private(B)
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
@@ -621,7 +620,8 @@ Contains
 ! We'll have J2_ijkl which goes with T2abab(K,L,A,B) in G2abab(I,J,A,B) and with T2abba(K,L,A,B) in G2abba(I,J,A,B)
 ! We'll have J3_ijkl which goes with T2abba(K,L,A,B) in G2abab(I,J,A,B) and with T2abab(K,L,A,B) in G2abba(I,J,A,B)
 !$omp parallel
-!$omp do collapse(3) private(C, A, L, D, B, J2_ijkl, J3_ijkl, V_cdkl, V_cdlk, MaxDummyFlag)
+!$omp do collapse(3) &
+!$omp&   private(C, A, L, D, B, J2_ijkl, J3_ijkl, V_cdkl, V_cdlk, MaxDummyFlag)
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
         Do K = 1,UEGInfo%NOcc
@@ -732,7 +732,8 @@ Contains
 !===========================================================!
 
 !$omp parallel
-!$omp do collapse(3) private(K, B, C, V_cjkb, V_cjbk, V_cika, V_ciak, MaxDummyFlag)
+!$omp do collapse(3) &
+!$omp&   private(K, B, C, V_cjkb, V_cjbk, V_cika, V_ciak, MaxDummyFlag)
 ! These are the linear terms
       Do I = 1,UEGInfo%NOcc
       Do J = 1,UEGInfo%NOcc
@@ -789,7 +790,8 @@ Contains
 ! We'll have J2_idal, which contracts with T2abab(L,J,D,B) in G2aaaa(I,J,A,B) and with T2aaaa(L,J,D,B) in G2abab(I,J,A,B
 ! We'll have J3_idal, which contracts with T2abba(L,J,D,B) in G2abba(I,J,A,B)
 ! This one is a true pain in the ass.
-!$omp do collapse(3) private(K, J, C, D, B, J1_idal, J2_idal, J3_idal, V_cdkl, V_cdlk, MaxDummyFlag)
+!$omp do collapse(3) &
+!$omp&   private(K, J, C, D, B, J1_idal, J2_idal, J3_idal, V_cdkl, V_cdlk, MaxDummyFlag)
       Do I = 1,UEGInfo%NOcc
       Do A = UEGInfo%NOcc+1,UEGInfo%NAO
         Do L = 1,UEGInfo%NOcc
@@ -921,7 +923,8 @@ Contains
 ! We'll have J1_idlb, which contracts with T2aaaa(L,J,A,D) in G2aaaa(I,J,A,B) and with T2abba(L,J,A,D) in G2abba(I,J,A,B)
 ! We'll have J2_idlb, which contracts with T2abba(L,J,A,D) in G2aaaa(I,J,A,B) and with T2aaaa(L,J,A,D) in G2abba(I,J,A,B
 ! We'll have J3_idlb, which contracts with T2abab(L,J,A,D) in G2abab(I,J,A,B)
-!$omp do collapse(3) private(K, J, C, D, A, J1_idlb, J2_idlb, J3_idlb, V_cdkl, V_cdlk, MaxDummyFlag)
+!$omp do collapse(3) &
+!$omp&   private(K, J, C, D, A, J1_idlb, J2_idlb, J3_idlb, V_cdkl, V_cdlk, MaxDummyFlag)
       Do I = 1,UEGInfo%NOcc
       Do B = UEGInfo%NOcc+1,UEGInfo%NAO
         Do L = 1,UEGInfo%NOcc
