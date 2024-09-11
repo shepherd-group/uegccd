@@ -1,14 +1,14 @@
 CCD Structure Factors:
   Final Structure Factor:
     Momentum Transfer Vector Magnitude:
-      max: 4.242640687119285
+      max: 4.2426406871193
       min: 1.0
-    Sum_G( S(G)*V(G) ): -1.469905472024372
+    Sum_G( S(G)*V(G) ): -1.4699054720244
   Initial Structure Factor:
     Momentum Transfer Vector Magnitude:
-      max: 4.242640687119285
+      max: 4.2426406871193
       min: 1.0
-    Sum_G( S(G)*V(G) ): -1.460195507818211
+    Sum_G( S(G)*V(G) ): -1.4601955078182
 Connectivity:
   Matrix Dim 0: 100
   Matrix Dim 1: 13
@@ -25,50 +25,50 @@ Eigenvalues:
     SCF Energy: 22.544763095324
 HF Structure Factors:
   Final Structure Factor:
-    Sum( ExSf*ExV ): 8.797438036763712
+    Sum( ExSf*ExV ): 8.7974380367637
   Initial Structure Factor:
-    Sum( ExSf*ExV ): 8.833331296807621
+    Sum( ExSf*ExV ): 8.8333312968076
 MP2 Structure Factors:
   Final Structure Factor:
     Momentum Transfer Vector Magnitude:
-      max: 4.242640687119285
+      max: 4.2426406871193
       min: 1.0
-    Sum_G( S(G)*V(G) ): -1.460195507818211
+    Sum_G( S(G)*V(G) ): -1.4601955078182
   Initial Structure Factor:
     Momentum Transfer Vector Magnitude:
-      max: 4.123105625617661
+      max: 4.1231056256177
       min: 1.0
-    Sum_G( S(G)*V(G) ): -1.4129004482903946
+    Sum_G( S(G)*V(G) ): -1.4129004482904
 Summary:
   Biggest CCD Energy Change: 0.0252280164
   CCD Correlation Energy: -0.734952736012
   Final CCD Energy: 22.890950144143
-  Iteration of Biggest CCD Energy Change: 1.0
-  Max CCD Residual: 3.02425604698e-08
+  Iteration of Biggest CCD Energy Change: 1
+  Max CCD Residual: 3.02426e-08
   Total Iterations: 37
 Twist Angles:
   Averages:
-    CCD: -0.7313622305681132
-    HF: 23.387353247888413
-    MP2: -0.7313622305681132
-    ntwist x: -0.0003880977630615234
-    ntwist y: -0.040601496696472165
-    ntwist z: -0.05734013080596924
+    CCD: -0.7313622305681
+    HF: 23.3873532478884
+    MP2: -0.7313622305681
+    ntwist x: -0.0003880977631
+    ntwist y: -0.0406014966965
+    ntwist z: -0.057340130806
   Connectivity Averages:
     max: 1255.64
     min: 0.0
   Eigenvalue Averages:
-    max: 3.4548001760934635
-    min: -1.0091054283372463
+    max: 3.4548001760935
+    min: -1.0091054283372
   Errors:
-    CCD: 0.00833880175680305
-    HF: 0.09561950337634785
-    MP2: 0.00833880175680305
-    ntwist x: 0.0294600323566654
-    ntwist y: 0.029846200355392316
-    ntwist z: 0.03005199938838316
+    CCD: 0.0083388017568
+    HF: 0.0956195033763
+    MP2: 0.0083388017568
+    ntwist x: 0.0294600323567
+    ntwist y: 0.0298462003554
+    ntwist z: 0.0300519993884
   Lowest Connectivity Diff Squared: 57.092094086326284
   Special Twist Angle:
-    x: 0.08350157737731934
-    y: 0.4124867916107178
-    z: -0.3325924873352051
+    x: 0.0835015773773
+    y: 0.4124867916107
+    z: -0.3325924873352

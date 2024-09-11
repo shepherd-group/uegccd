@@ -354,9 +354,10 @@ class Dataset():
 
 		self.HF_structure_factors = sfactors	
 
-	def test_summary(self):
+	def test_summary(self, tol=1e-13):
 		"""
 		Return a dictionary with summarizing information for regression testing purposes.
+		Precision of output is controlled by "tol" parameter.
 
 		Values stored in this dictionary should reflect the breadth of uegCCD's capabilities.
 		This dictionary is used with pytest's pytest-regression's extension,
@@ -366,27 +367,28 @@ class Dataset():
 		"""
 
 		i_max_change = np.argmax(self.summary["biggest changes"])
+		ndigits = int(-np.log10(tol))
 
 		results = {
 			# from Output
 			'Summary': {
-				'Final CCD Energy': self.summary["final CCD energy"],
-				'CCD Correlation Energy': self.summary["final correlation energy"],
+				'Final CCD Energy': round(self.summary["final CCD energy"], ndigits),
+				'CCD Correlation Energy': round(self.summary["final correlation energy"], ndigits),
 				'Total Iterations': self.summary["total iterations"],
-				'Max CCD Residual': self.summary["max CCD residual"],
-				'Biggest CCD Energy Change': self.summary["biggest changes"][i_max_change].item(),
-				'Iteration of Biggest CCD Energy Change': self.summary["iterations"][i_max_change].item(),
+				'Max CCD Residual': round(self.summary["max CCD residual"], ndigits),
+				'Biggest CCD Energy Change': round(self.summary["biggest changes"][i_max_change].item(), ndigits),
+				'Iteration of Biggest CCD Energy Change': int(self.summary["iterations"][i_max_change].item()),
 			},
 			'Eigenvalues': {
 				'Initial Iteration': {
 					'Number of Eigenvalues': len(self.eigenvalues[0]['eigenvalues']),
-					'SCF Energy': self.eigenvalues[0]['E(SCF)'],
-					'MP2 Energy': self.eigenvalues[0]['E(2)']
+					'SCF Energy': round(self.eigenvalues[0]['E(SCF)'], ndigits),
+					'MP2 Energy': round(self.eigenvalues[0]['E(2)'], ndigits),
 				},
 				'Final Iteration': {
 					'Number of Eigenvalues': len(self.eigenvalues[-1]['eigenvalues']),
-					'SCF Energy': self.eigenvalues[-1]['E(SCF)'],
-					'MP2 Energy': self.eigenvalues[-1]['E(2)']
+					'SCF Energy': round(self.eigenvalues[-1]['E(SCF)'], ndigits),
+					'MP2 Energy': round(self.eigenvalues[-1]['E(2)'], ndigits),
 				}
 			},
 
@@ -401,57 +403,65 @@ class Dataset():
 			# from fort.59
 			'Twist Angles': {
 				'Special Twist Angle': {
-					'x': self.twist["special twist angle"][0].item(),
-					'y': self.twist["special twist angle"][1].item(),
-					'z': self.twist["special twist angle"][2].item(),
+					'x': round(self.twist["special twist angle"][0].item(), ndigits),
+					'y': round(self.twist["special twist angle"][1].item(), ndigits),
+					'z': round(self.twist["special twist angle"][2].item(), ndigits),
 				},
 				'Lowest Connectivity Diff Squared': self.twist["lowest connectivity diff squared"],
 				'Averages': {
-					'ntwist x': self.twist["averages"]["ntwist"][0].item(),
-					'ntwist y': self.twist["averages"]["ntwist"][1].item(),
-					'ntwist z': self.twist["averages"]["ntwist"][2].item(),
-					'HF': self.twist["averages"]["HF"],
-					'MP2': self.twist["averages"]["MP2"],
-					'CCD': self.twist["averages"]["CCD"],
+					'ntwist x': round(self.twist["averages"]["ntwist"][0].item(), ndigits),
+					'ntwist y': round(self.twist["averages"]["ntwist"][1].item(), ndigits),
+					'ntwist z': round(self.twist["averages"]["ntwist"][2].item(), ndigits),
+					'HF': round(self.twist["averages"]["HF"], ndigits),
+					'MP2': round(self.twist["averages"]["MP2"], ndigits),
+					'CCD': round(self.twist["averages"]["CCD"], ndigits),
 				},
 				'Errors': {
-					'ntwist x': self.twist["errors"]["ntwist"][0].item(),
-					'ntwist y': self.twist["errors"]["ntwist"][1].item(),
-					'ntwist z': self.twist["errors"]["ntwist"][2].item(),
-					'HF': self.twist["errors"]["HF"],
-					'MP2': self.twist["errors"]["MP2"],
-					'CCD': self.twist["errors"]["CCD"],
+					'ntwist x': round(self.twist["errors"]["ntwist"][0].item(), ndigits),
+					'ntwist y': round(self.twist["errors"]["ntwist"][1].item(), ndigits),
+					'ntwist z': round(self.twist["errors"]["ntwist"][2].item(), ndigits),
+					'HF': round(self.twist["errors"]["HF"], ndigits),
+					'MP2': round(self.twist["errors"]["MP2"], ndigits),
+					'CCD': round(self.twist["errors"]["CCD"], ndigits),
 				},
 				'Eigenvalue Averages': {
-					'min': np.min(self.twist["eigenvalue averages"]).item(),
-					'max': np.max(self.twist["eigenvalue averages"]).item(),
+					'min': round(np.min(self.twist["eigenvalue averages"]).item(), ndigits),
+					'max': round(np.max(self.twist["eigenvalue averages"]).item(), ndigits),
 				},
 				'Connectivity Averages': {
-					'min': np.min(self.twist["connectivity averages"]).item(),
-					'max': np.max(self.twist["connectivity averages"]).item(),
+					'min': round(np.min(self.twist["connectivity averages"]).item(), ndigits),
+					'max': round(np.max(self.twist["connectivity averages"]).item(), ndigits),
 				},
 			},
 
 			# from fort.80
 			'CCD Structure Factors': {
 				'Initial Structure Factor': {
-					'Sum_G( S(G)*V(G) )': np.dot(
+					'Sum_G( S(G)*V(G) )': round(np.dot(
 						self.CCD_structure_factors[0]["S(G)"],
 						self.CCD_structure_factors[0]["Coulomb potential"]
-						).item(),
+						).item(), ndigits),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.CCD_structure_factors[0]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.CCD_structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'min': round(np.min(
+							self.CCD_structure_factors[0]["momentum transfer vector magnitude"]
+							).item(), ndigits),
+						'max': round(np.max(
+							self.CCD_structure_factors[0]["momentum transfer vector magnitude"]
+							).item(), ndigits),
 					}
 				},
 				'Final Structure Factor': {
-					'Sum_G( S(G)*V(G) )': np.dot(
+					'Sum_G( S(G)*V(G) )': round(np.dot(
 						self.CCD_structure_factors[-1]["S(G)"],
 						self.CCD_structure_factors[-1]["Coulomb potential"]
-						).item(),
+						).item(), ndigits),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'min': round(np.min(
+							self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]
+							).item(), ndigits),
+						'max': round(np.max(
+							self.CCD_structure_factors[-1]["momentum transfer vector magnitude"]
+							).item(), ndigits),
 					}	
 				}
 			},
@@ -459,23 +469,31 @@ class Dataset():
 			# from fort.81
 			'MP2 Structure Factors': {
 				'Initial Structure Factor': {
-					'Sum_G( S(G)*V(G) )': np.dot(
+					'Sum_G( S(G)*V(G) )': round(np.dot(
 						self.MP2_structure_factors[0]["S(G)"],
 						self.MP2_structure_factors[0]["Coulomb potential"]
-						).item(),
+						).item(), ndigits),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.MP2_structure_factors[0]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.MP2_structure_factors[0]["momentum transfer vector magnitude"]).item(),
+						'min': round(np.min(
+							self.MP2_structure_factors[0]["momentum transfer vector magnitude"]
+							).item(), ndigits),
+						'max': round(np.max(
+							self.MP2_structure_factors[0]["momentum transfer vector magnitude"]
+							).item(), ndigits),
 					}
 				},
 				'Final Structure Factor': {
-					'Sum_G( S(G)*V(G) )': np.dot(
+					'Sum_G( S(G)*V(G) )': round(np.dot(
 						self.MP2_structure_factors[-1]["S(G)"],
 						self.MP2_structure_factors[-1]["Coulomb potential"]
-						).item(),
+						).item(), ndigits),
 					'Momentum Transfer Vector Magnitude': {
-						'min': np.min(self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
-						'max': np.max(self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]).item(),
+						'min': round(np.min(
+							self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]
+							).item(), ndigits),
+						'max': round(np.max(
+							self.MP2_structure_factors[-1]["momentum transfer vector magnitude"]
+							).item(), ndigits),
 					}	
 				}
 			},
@@ -483,16 +501,16 @@ class Dataset():
 			# from fort.82
 			'HF Structure Factors': {
 				'Initial Structure Factor': {
-					'Sum( ExSf*ExV )': np.dot(
+					'Sum( ExSf*ExV )': round(np.dot(
 						self.HF_structure_factors[0]["structure factor exchange energy"],
 						self.HF_structure_factors[0]["Coulomb potential exchange energy"]
-					).item()
+					).item(), ndigits),
 				},
 				'Final Structure Factor': {
-					'Sum( ExSf*ExV )': np.dot(
+					'Sum( ExSf*ExV )': round(np.dot(
 						self.HF_structure_factors[-1]["structure factor exchange energy"],
 						self.HF_structure_factors[-1]["Coulomb potential exchange energy"]
-					).item()
+					).item(), ndigits),
 				}
 			}
 		}
