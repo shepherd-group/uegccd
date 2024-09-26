@@ -1,0 +1,9 @@
+name: uegccd-testing
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy=2.0.0
+  - pytest=8.3.2
+  - pytest-regressions=2.5.0
+  - python=3.12.4

@@ -1,0 +1,74 @@
+CCD Structure Factors:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.3588989435407
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.4449131807763
+  Initial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.3588989435407
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.3134340333885
+Connectivity:
+  Matrix Dim 0: 100
+  Matrix Dim 1: 19
+  Maximum: 6000
+  Number of Unique Entries: 682
+Eigenvalues:
+  Final Iteration:
+    MP2 Energy: -1.75695338473
+    Number of Eigenvalues: 93
+    SCF Energy: 41.366067750576
+  Initial Iteration:
+    MP2 Energy: -1.729882517527
+    Number of Eigenvalues: 93
+    SCF Energy: 41.180791231938
+HF Structure Factors:
+  Final Structure Factor:
+    Sum( ExSf*ExV ): 17.4744515184672
+  Initial Structure Factor:
+    Sum( ExSf*ExV ): 17.5362074458156
+MP2 Structure Factors:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.3588989435407
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.3134340333885
+  Initial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 4.1231056256177
+      min: 1.0
+    Sum_G( S(G)*V(G) ): -1.3526074943393
+Summary:
+  Biggest CCD Energy Change: 0.0269562024
+  CCD Correlation Energy: -1.574090159055
+  Final CCD Energy: 39.791977591521
+  Iteration of Biggest CCD Energy Change: 1
+  Max CCD Residual: 2.2807e-08
+  Total Iterations: 35
+Twist Angles:
+  Averages:
+    CCD: -1.7730409717217
+    HF: 41.2508273981724
+    MP2: -1.7730409717217
+    ntwist x: -0.0003880977631
+    ntwist y: -0.0406014966965
+    ntwist z: -0.057340130806
+  Connectivity Averages:
+    max: 5578.88
+    min: 0.0
+  Eigenvalue Averages:
+    max: 3.4246493234249
+    min: -1.0715212090159
+  Errors:
+    CCD: 0.0070095652362
+    HF: 0.0435589809395
+    MP2: 0.0070095652362
+    ntwist x: 0.0294600323567
+    ntwist y: 0.0298462003554
+    ntwist z: 0.0300519993884
+  Lowest Connectivity Diff Squared: 327.3024220416518
+  Special Twist Angle:
+    x: -0.3182537555695
+    y: 0.1107046604156
+    z: -0.386666059494

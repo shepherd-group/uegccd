@@ -1,0 +1,11 @@
+bin/*
+benchmarks/uegccd
+
+Output
+fort.*
+
+__pycache__/
+.vscode/
+.pytest_cache/
+*.egg-info/
+build/

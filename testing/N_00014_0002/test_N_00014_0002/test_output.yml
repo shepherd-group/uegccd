@@ -1,0 +1,74 @@
+CCD Structure Factors:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.8729833462074
+      min: 1.4142135623731
+    Sum_G( S(G)*V(G) ): -0.2895084074496
+  Initial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.8729833462074
+      min: 1.4142135623731
+    Sum_G( S(G)*V(G) ): -0.2273087295359
+Connectivity:
+  Matrix Dim 0: 100
+  Matrix Dim 1: 6
+  Maximum: 192
+  Number of Unique Entries: 33
+Eigenvalues:
+  Final Iteration:
+    MP2 Energy: -0.113654364768
+    Number of Eigenvalues: 20
+    SCF Energy: 8.925974392432
+  Initial Iteration:
+    MP2 Energy: -0.1317174123
+    Number of Eigenvalues: 20
+    SCF Energy: 9.07638714305
+HF Structure Factors:
+  Final Structure Factor:
+    Sum( ExSf*ExV ): 2.2039252419455
+  Initial Structure Factor:
+    Sum( ExSf*ExV ): 2.0892228129967
+MP2 Structure Factors:
+  Final Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.8729833462074
+      min: 1.4142135623731
+    Sum_G( S(G)*V(G) ): -0.2273087295359
+  Initial Structure Factor:
+    Momentum Transfer Vector Magnitude:
+      max: 3.8729833462074
+      min: 1.4142135623731
+    Sum_G( S(G)*V(G) ): -0.2634348246
+Summary:
+  Biggest CCD Energy Change: 0.0216580871
+  CCD Correlation Energy: -0.144754203725
+  Final CCD Energy: 8.781220188707
+  Iteration of Biggest CCD Energy Change: 1
+  Max CCD Residual: 3.8304e-08
+  Total Iterations: 35
+Twist Angles:
+  Averages:
+    CCD: -0.1058015988302
+    HF: 8.1666043088284
+    MP2: -0.1058015988302
+    ntwist x: -0.0003880977631
+    ntwist y: -0.0406014966965
+    ntwist z: -0.057340130806
+  Connectivity Averages:
+    max: 105.4
+    min: 2.88
+  Eigenvalue Averages:
+    max: 3.4267278010365
+    min: -0.7729035188002
+  Errors:
+    CCD: 0.0038978450799
+    HF: 0.0903418609474
+    MP2: 0.0038978450799
+    ntwist x: 0.0294600323567
+    ntwist y: 0.0298462003554
+    ntwist z: 0.0300519993884
+  Lowest Connectivity Diff Squared: 60.444268901234494
+  Special Twist Angle:
+    x: -0.0229487419128
+    y: 0.3042941093445
+    z: 0.272510766983
