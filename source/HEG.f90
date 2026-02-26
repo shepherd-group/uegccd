@@ -1019,7 +1019,8 @@ contains
 
         Logical, Intent(InOut) :: InCore
 
-        Integer :: this_qvec(3), this_qvec2
+        Integer :: this_qvec(3)
+        Real (Kind=pr) this_qvec2
 
         this_qvec=-HEGData%nvec(i,:)+HEGData%nvec(a,:)
         this_qvec2=dot_product(this_qvec,this_qvec)
