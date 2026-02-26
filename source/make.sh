@@ -1,5 +1,43 @@
 #!/bin/bash
 
+# Build script for uegCCD 
+#
+# Usage: ./make.sh [OPTIONS]
+#
+# OPTIONS:
+#   -d    Compile with debug symbols and debugging optimizations (-Og -g)
+#         Useful for debugging with gdb or similar tools
+#
+#   -p    Compile with profiling support (-pg)
+#         Enables profiling to analyze program performance with gprof
+#
+#   -t    Compile with OpenMP threading support (-fopenmp)
+#         Enables parallel execution using OpenMP directives
+#
+# DESCRIPTION:
+#   Compiles the uegGCCD.
+#   Automatically detects the operating system (macOS or Linux) and applies
+#   appropriate compiler flags and linking libraries.
+# 
+#   On macOS:  Uses Accelerate framework for linear algebra
+#   On Linux:  Links against OpenBLAS for linear algebra
+# 
+#   Output binary is placed in ../bin/uegccdv2.09 and copied to ../benchmarks/uegccd
+#   Object files (.o) and module files (.mod) are cleaned up after linking.
+#
+# EXAMPLES:
+#   ./make.sh              # Standard release build
+#   ./make.sh -d           # Debug build
+#   ./make.sh -t           # Threaded build with OpenMP
+#   ./make.sh -d -t        # Debug build with OpenMP threading
+#   ./make.sh -p           # Profiling-enabled build
+
+# Print above help message if requested
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    sed -n '/^# Build script/,/Profiling-enabled build$/p' "$0" | sed 's/^#//'
+    exit 0
+fi
+
 # Allow for -d flag to compile for debugging.
 # Further flags can be added to the case statement if desired.
 debug=false
