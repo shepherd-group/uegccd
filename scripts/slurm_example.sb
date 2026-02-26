@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --job-name=uegccd
+#SBATCH --nodes=1           # This job must run all on one node.
+#SBATCH --ntasks=1          # We only need one task (aka process)...
+#SBATCH --cpus-per-task=4   # ..for threading that task will need mutiple CPUs
+#SBATCH --time=01:00:00
+#SBATCH --output=uegccd.out
+
+# This is a sample script for running uegCCD with 4 threads.
+# You must have compiled uegCCD with the -t option.
+
+# Constrain the number of threads to the number of CPUs requested.
+# SLURM *should* ensure this automatically but this is a good failsafe.
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+# Change to your desired run directory here.
+# Either copy the executable into that directory or give the path to it.
+./uegccdv2.09
